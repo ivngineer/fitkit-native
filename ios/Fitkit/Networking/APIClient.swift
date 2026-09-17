@@ -1,0 +1,221 @@
+import Foundation
+
+enum APIError: LocalizedError, Equatable {
+    case unauthorized(String)
+    case server(status: Int, code: String, message: String)
+    case network(String)
+    case invalidResponse
+
+    var errorDescription: String? {
+        switch self {
+        case .unauthorized(let message): message
+        case .server(_, _, let message): message
+        case .network(let message): message
+        case .invalidResponse: "The server sent a response Fitkit didn't understand."
+        }
+    }
+
+    var code: String? {
+        if case .server(_, let code, _) = self { return code }
+        return nil
+    }
+}
+
+/// Talks to the Fitkit server. All scraping, provider keys and accounts live
+/// server-side; the app only ever sees Fitkit's own API.
+struct APIClient: Sendable {
+    var baseURL: URL
+    var token: String?
+    var session: URLSession = .shared
+
+    // MARK: Auth
+
+    func signUp(email: String, password: String) async throws -> AuthResponse {
+        try await send("POST", "/v1/auth/signup", body: ["email": email, "password": password])
+    }
+
+    func signIn(email: String, password: String) async throws -> AuthResponse {
+        try await send("POST", "/v1/auth/login", body: ["email": email, "password": password])
+    }
+
+    func signOut() async throws {
+        try await sendEmpty("POST", "/v1/auth/logout")
+    }
+
+    // MARK: Account
+
+    func me() async throws -> User {
+        try await send("GET", "/v1/me")
+    }
+
+    func deleteAccount() async throws {
+        try await sendEmpty("DELETE", "/v1/me")
+    }
+
+    func setReferralSource(_ source: ReferralSource) async throws -> User {
+        try await send("PUT", "/v1/me/referral-source", body: ["source": source.rawValue])
+    }
+
+    func setPinterestHandle(_ handle: String) async throws -> User {
+        try await send("PUT", "/v1/me/pinterest", body: ["handle": handle])
+    }
+
+    // MARK: Imports
+
+    func startImport() async throws -> ImportJob {
+        try await send("POST", "/v1/imports")
+    }
+
+    func latestImport() async throws -> ImportJob? {
+        do {
+            return try await send("GET", "/v1/imports/latest")
+        } catch APIError.server(404, _, _) {
+            return nil
+        }
+    }
+
+    func importJob(id: String) async throws -> ImportJob {
+        try await send("GET", "/v1/imports/\(id)")
+    }
+
+    // MARK: Pins
+
+    func pins(cursor: String? = nil, limit: Int = 60) async throws -> PinsPage {
+        var query = [URLQueryItem(name: "limit", value: String(limit))]
+        if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+        return try await send("GET", "/v1/pins", query: query)
+    }
+
+    /// Hides a pin from the grid. The pin stays saved on the server, so a
+    /// re-import never brings it back and it can be restored later.
+    func hidePin(id: String) async throws {
+        try await sendEmpty("PUT", "/v1/pins/\(id)/hidden")
+    }
+
+    func unhidePin(id: String) async throws {
+        try await sendEmpty("DELETE", "/v1/pins/\(id)/hidden")
+    }
+
+    // MARK: Cart
+
+    /// Pins the user set aside to buy, most recently added first.
+    func cart() async throws -> PinsPage {
+        try await send("GET", "/v1/cart")
+    }
+
+    func addToCart(id: String) async throws {
+        try await sendEmpty("PUT", "/v1/cart/\(id)")
+    }
+
+    func removeFromCart(id: String) async throws {
+        try await sendEmpty("DELETE", "/v1/cart/\(id)")
+    }
+
+    func analysis(pinID: String) async throws -> PinAnalysis {
+        try await send("GET", "/v1/pins/\(pinID)/analysis")
+    }
+
+    func startAnalysis(pinID: String, force: Bool = false) async throws -> PinAnalysis {
+        let query = force ? [URLQueryItem(name: "force", value: "true")] : []
+        return try await send("POST", "/v1/pins/\(pinID)/analysis", query: query)
+    }
+
+    /// Resolves server-relative media paths ("/media/…") and absolute URLs.
+    func resolve(_ path: String?) -> URL? {
+        guard let path, !path.isEmpty else { return nil }
+        return URL(string: path, relativeTo: baseURL)?.absoluteURL
+    }
+
+    // MARK: Transport
+
+    private func request(_ method: String, _ path: String, query: [URLQueryItem], body: [String: String]?) throws -> URLRequest {
+        guard var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false) else {
+            throw APIError.invalidResponse
+        }
+        if !query.isEmpty { components.queryItems = query }
+        guard let url = components.url else { throw APIError.invalidResponse }
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.timeoutInterval = 30
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        if let body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONEncoder().encode(body)
+        }
+        return request
+    }
+
+    private func perform(_ request: URLRequest) async throws -> Data {
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let error as URLError where error.code == .cancelled {
+            throw CancellationError()
+        } catch let error as URLError {
+            throw APIError.network(Self.describe(error))
+        }
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else {
+            let serverError = try? Self.decoder.decode([String: ServerError].self, from: data)["error"]
+            let message = serverError?.message ?? HTTPURLResponse.localizedString(forStatusCode: http.statusCode).capitalized
+            if http.statusCode == 401 { throw APIError.unauthorized(message) }
+            throw APIError.server(status: http.statusCode, code: serverError?.code ?? "http_\(http.statusCode)", message: message)
+        }
+        return data
+    }
+
+    private func send<T: Decodable>(_ method: String, _ path: String, query: [URLQueryItem] = [], body: [String: String]? = nil) async throws -> T {
+        let data = try await perform(try request(method, path, query: query, body: body))
+        do {
+            return try Self.decoder.decode(T.self, from: data)
+        } catch {
+            throw APIError.invalidResponse
+        }
+    }
+
+    private func sendEmpty(_ method: String, _ path: String) async throws {
+        _ = try await perform(try request(method, path, query: [], body: nil))
+    }
+
+    private static func describe(_ error: URLError) -> String {
+        switch error.code {
+        case .notConnectedToInternet, .networkConnectionLost:
+            "You're offline. Check your connection and try again."
+        case .cannotConnectToHost, .cannotFindHost, .timedOut:
+            "Couldn't reach the Fitkit server. Try again in a moment."
+        default:
+            error.localizedDescription
+        }
+    }
+
+    static let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let string = try decoder.singleValueContainer().decode(String.self)
+            guard let date = ServerDate.parse(string) else {
+                throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Invalid date \(string)"))
+            }
+            return date
+        }
+        return decoder
+    }()
+}
+
+/// Parses RFC 3339 timestamps with any number of fractional-second digits,
+/// as produced by Go's time.Time JSON encoding.
+nonisolated enum ServerDate {
+    static func parse(_ string: String) -> Date? {
+        var base = string
+        var fraction = 0.0
+        if let dot = string.firstIndex(of: ".") {
+            let afterDot = string.index(after: dot)
+            let zoneStart = string[afterDot...].firstIndex { !$0.isNumber } ?? string.endIndex
+            fraction = Double("0." + string[afterDot..<zoneStart]) ?? 0
+            base = String(string[..<dot] + string[zoneStart...])
+        }
+        guard let date = try? Date(base, strategy: .iso8601) else { return nil }
+        return date.addingTimeInterval(fraction)
+    }
+}

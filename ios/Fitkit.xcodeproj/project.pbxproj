@@ -1,0 +1,506 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXContainerItemProxy section */
+		F1000000000000000000C001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F1000000000000000000A001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F1000000000000000000B001;
+			remoteInfo = Fitkit;
+		};
+		F1000000000000000000C002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F1000000000000000000A001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F1000000000000000000B001;
+			remoteInfo = Fitkit;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		F1000000000000000000D001 /* Fitkit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Fitkit.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F1000000000000000000D002 /* FitkitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitkitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F1000000000000000000D003 /* FitkitUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitkitUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F1000000000000000000D004 /* Fitkit-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Fitkit-Info.plist"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F1000000000000000000E001 /* Fitkit */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Fitkit;
+			sourceTree = "<group>";
+		};
+		F1000000000000000000E002 /* FitkitTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FitkitTests;
+			sourceTree = "<group>";
+		};
+		F1000000000000000000E003 /* FitkitUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FitkitUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F1000000000000000000F001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F1000000000000000000F002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F1000000000000000000F003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		F10000000000000000001001 = {
+			isa = PBXGroup;
+			children = (
+				F1000000000000000000E001 /* Fitkit */,
+				F1000000000000000000E002 /* FitkitTests */,
+				F1000000000000000000E003 /* FitkitUITests */,
+				F10000000000000000001003 /* Config */,
+				F10000000000000000001002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F10000000000000000001002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F1000000000000000000D001 /* Fitkit.app */,
+				F1000000000000000000D002 /* FitkitTests.xctest */,
+				F1000000000000000000D003 /* FitkitUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F10000000000000000001003 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				F1000000000000000000D004 /* Fitkit-Info.plist */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F1000000000000000000B001 /* Fitkit */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F10000000000000000002002 /* Build configuration list for PBXNativeTarget "Fitkit" */;
+			buildPhases = (
+				F10000000000000000003001 /* Sources */,
+				F1000000000000000000F001 /* Frameworks */,
+				F10000000000000000004001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F1000000000000000000E001 /* Fitkit */,
+			);
+			name = Fitkit;
+			packageProductDependencies = (
+			);
+			productName = Fitkit;
+			productReference = F1000000000000000000D001 /* Fitkit.app */;
+			productType = "com.apple.product-type.application";
+		};
+		F1000000000000000000B002 /* FitkitTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F10000000000000000002003 /* Build configuration list for PBXNativeTarget "FitkitTests" */;
+			buildPhases = (
+				F10000000000000000003002 /* Sources */,
+				F1000000000000000000F002 /* Frameworks */,
+				F10000000000000000004002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F10000000000000000005001 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F1000000000000000000E002 /* FitkitTests */,
+			);
+			name = FitkitTests;
+			packageProductDependencies = (
+			);
+			productName = FitkitTests;
+			productReference = F1000000000000000000D002 /* FitkitTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F1000000000000000000B003 /* FitkitUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F10000000000000000002004 /* Build configuration list for PBXNativeTarget "FitkitUITests" */;
+			buildPhases = (
+				F10000000000000000003003 /* Sources */,
+				F1000000000000000000F003 /* Frameworks */,
+				F10000000000000000004003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F10000000000000000005002 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F1000000000000000000E003 /* FitkitUITests */,
+			);
+			name = FitkitUITests;
+			packageProductDependencies = (
+			);
+			productName = FitkitUITests;
+			productReference = F1000000000000000000D003 /* FitkitUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F1000000000000000000A001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					F1000000000000000000B001 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					F1000000000000000000B002 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = F1000000000000000000B001;
+					};
+					F1000000000000000000B003 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = F1000000000000000000B001;
+					};
+				};
+			};
+			buildConfigurationList = F10000000000000000002001 /* Build configuration list for PBXProject "Fitkit" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F10000000000000000001001;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F10000000000000000001002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F1000000000000000000B001 /* Fitkit */,
+				F1000000000000000000B002 /* FitkitTests */,
+				F1000000000000000000B003 /* FitkitUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F10000000000000000004001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F10000000000000000004002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F10000000000000000004003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F10000000000000000003001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F10000000000000000003002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F10000000000000000003003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F10000000000000000005001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F1000000000000000000B001 /* Fitkit */;
+			targetProxy = F1000000000000000000C001 /* PBXContainerItemProxy */;
+		};
+		F10000000000000000005002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F1000000000000000000B001 /* Fitkit */;
+			targetProxy = F1000000000000000000C002 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		F10000000000000000006001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		F10000000000000000006002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_VERSION = 6.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F10000000000000000006003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 8L6Z4GPW7V;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				FITKIT_API_BASE_URL = "http:/$()/localhost:8080";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Fitkit-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Fitkit;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.shopping";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.fitkit.Fitkit;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F10000000000000000006004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 8L6Z4GPW7V;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				FITKIT_API_BASE_URL = "https:/$()/api.fitkit.app";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Fitkit-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Fitkit;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.shopping";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.fitkit.Fitkit;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F10000000000000000006005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 8L6Z4GPW7V;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.fitkit.FitkitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Fitkit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Fitkit";
+			};
+			name = Debug;
+		};
+		F10000000000000000006006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 8L6Z4GPW7V;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.fitkit.FitkitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Fitkit.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Fitkit";
+			};
+			name = Release;
+		};
+		F10000000000000000006007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 8L6Z4GPW7V;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.fitkit.FitkitUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Fitkit;
+			};
+			name = Debug;
+		};
+		F10000000000000000006008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 8L6Z4GPW7V;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.fitkit.FitkitUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Fitkit;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F10000000000000000002001 /* Build configuration list for PBXProject "Fitkit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F10000000000000000006001 /* Debug */,
+				F10000000000000000006002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F10000000000000000002002 /* Build configuration list for PBXNativeTarget "Fitkit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F10000000000000000006003 /* Debug */,
+				F10000000000000000006004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F10000000000000000002003 /* Build configuration list for PBXNativeTarget "FitkitTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F10000000000000000006005 /* Debug */,
+				F10000000000000000006006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F10000000000000000002004 /* Build configuration list for PBXNativeTarget "FitkitUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F10000000000000000006007 /* Debug */,
+				F10000000000000000006008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F1000000000000000000A001 /* Project object */;
+}

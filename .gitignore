@@ -1,0 +1,12 @@
+# Server
+server/data/
+server/.env
+server/fitkitd
+
+# Xcode
+ios/build/
+DerivedData/
+xcuserdata/
+*.xcresult
+.DS_Store
+server/*.log
