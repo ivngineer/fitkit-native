@@ -46,7 +46,7 @@ xcrun devicectl device install app --device <device UDID> \
 xcrun devicectl device process launch --device <device UDID> app.fitkit.Fitkit
 ```
 
-`xcrun devicectl list devices` prints the UDIDs of paired devices, network ones included. The `$()` in the URL keeps Xcode from reading `//` as a comment.
+`ios/scripts/deploy-device.sh` does all three steps, filling in the Mac's LAN address and the paired iPhone (pass a UDID, or set `FITKIT_DEVICE`, when there's more than one). `xcrun devicectl list devices` prints the UDIDs of paired devices, network ones included. The `$()` in the URL keeps Xcode from reading `//` as a comment.
 
 ### Offline browsing
 

@@ -158,26 +158,44 @@ struct PinDetailView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .safeAreaInset(edge: .bottom) { buyOutfitBar }
+            .contentMargins(.bottom, 96, for: .scrollContent)
+            .overlay(alignment: .bottom) { buyOutfitBar(total: result.outfitTotal) }
         }
     }
 
     /// Checkout isn't wired up yet. The button is here so the layout settles
     /// around it before one-tap buy and ship arrives.
-    private var buyOutfitBar: some View {
+    ///
+    /// The pill sits low, inset about as far from the sides as from the bottom
+    /// so it follows the rounded screen corners, over a fade to dark that
+    /// keeps it readable above the list.
+    private func buyOutfitBar(total: String?) -> some View {
         Button {
         } label: {
-            Text("Buy Outfit")
-                .font(.headline)
-                .frame(maxWidth: .infinity, minHeight: 50)
-                .foregroundStyle(.black)
-                .background(.white, in: .rect(cornerRadius: 14))
+            HStack(spacing: 8) {
+                Text("Buy Outfit")
+                if let total {
+                    Text("·").foregroundStyle(.black.opacity(0.35))
+                    Text(total).monospacedDigit()
+                }
+            }
+            .font(.headline)
+            .foregroundStyle(.black)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .background(.white, in: .capsule)
+            .contentShape(.capsule)
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.bar)
         .accessibilityIdentifier("pin.buyOutfit")
+        .padding(.horizontal, 22)
+        .padding(.bottom, 20)
+        .padding(.top, 48)
+        .background {
+            LinearGradient(colors: [.black.opacity(0), .black.opacity(0.55), .black.opacity(0.9)],
+                           startPoint: .top, endPoint: .bottom)
+                .allowsHitTesting(false)
+        }
+        .ignoresSafeArea(edges: .bottom)
     }
 }
 

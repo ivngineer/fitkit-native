@@ -95,6 +95,18 @@ struct AnalysisResult: Codable, Sendable {
     let provider: String
     let demo: Bool
     let generatedAt: Date
+
+    /// What the whole look costs at each piece's best match, rounded to
+    /// whole units. Prices are added as plain numbers with no currency
+    /// conversion, and the symbol comes from the first priced piece.
+    /// Nil when no piece has a price.
+    var outfitTotal: String? {
+        let priced = items.compactMap { $0.listings.first }.filter { $0.amount != nil }
+        guard let first = priced.first else { return nil }
+        let sum = priced.reduce(0) { $0 + ($1.amount ?? 0) }
+        let number = Int(sum.rounded()).formatted()
+        return first.currencySymbol + number
+    }
 }
 
 struct DetectedItem: Codable, Identifiable, Sendable {
@@ -136,6 +148,21 @@ struct Listing: Codable, Identifiable, Hashable, Sendable {
     let inStock: Bool?
 
     var id: String { url }
+
+    /// The numeric price, read from the display string when the store gave
+    /// no separate value.
+    var amount: Double? {
+        if let priceValue { return priceValue }
+        guard let price else { return nil }
+        let digits = price.drop { !$0.isNumber }.prefix { $0.isNumber || $0 == "." || $0 == "," }
+        return Double(digits.replacing(",", with: ""))
+    }
+
+    /// Whatever precedes the number in the display price, like "$" or "€".
+    var currencySymbol: String {
+        guard let price else { return "" }
+        return String(price.prefix { !$0.isNumber }).trimmingCharacters(in: .whitespaces)
+    }
 }
 
 enum ReferralSource: String, CaseIterable, Identifiable, Sendable {
