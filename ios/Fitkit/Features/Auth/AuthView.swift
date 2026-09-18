@@ -91,6 +91,7 @@ struct AuthView: View {
                 .listRowInsets(EdgeInsets())
             }
             .scrollDismissesKeyboard(.interactively)
+            .readableContentWidth()
             .onChange(of: mode) { errorMessage = nil }
         }
     }

@@ -28,6 +28,8 @@ final class FitkitUITests: XCTestCase {
 
     @MainActor
     func testSignUpOnboardImportAndShopAPin() throws {
+        // The simulator keeps its orientation between runs.
+        XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launchArguments = ["-resetSession", "-uiTesting", "-serverBaseURL", baseURL]
         app.launch()
@@ -84,6 +86,10 @@ final class FitkitUITests: XCTestCase {
         snapshot(app, "6-pin-detail-expanded")
         app.buttons["Done"].tap()
 
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            checkLandscapeSidePanel(app)
+        }
+
         // Quick actions put a pin in the cart, and the cart sheet lists it.
         firstPin.press(forDuration: 1.2)
         let addToCart = app.buttons["Add to Cart"]
@@ -112,6 +118,54 @@ final class FitkitUITests: XCTestCase {
         let username = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@ OR value CONTAINS %@", "@\(profile)", "@\(profile)")).firstMatch
         XCTAssertTrue(username.waitForExistence(timeout: 5), "Account screen should show the Pinterest username")
         snapshot(app, "9-account")
+    }
+
+    /// On iPad in landscape a pin opens in a panel beside the grid, closed
+    /// with a button rather than a swipe. The open pin follows rotation
+    /// between the panel and the portrait sheet.
+    @MainActor
+    private func checkLandscapeSidePanel(_ app: XCUIApplication) {
+        let pins = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'pin.' AND NOT identifier IN {'pin.close', 'pin.menu', 'pin.remove', 'pin.buyOutfit'}"))
+        let close = app.buttons["pin.close"]
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        sleep(1)
+        snapshot(app, "5c-landscape-home")
+
+        pins.element(boundBy: 0).tap()
+        XCTAssertTrue(close.waitForExistence(timeout: 5), "Landscape should open the pin in a side panel")
+        XCTAssertFalse(app.buttons["Done"].exists, "The side panel closes with its own button")
+        sleep(2)
+        snapshot(app, "5d-landscape-panel")
+
+        // Another pin swaps into the open panel.
+        pins.element(boundBy: 1).tap()
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        sleep(2)
+        snapshot(app, "5e-landscape-panel-swapped")
+
+        // A store link opens inside the panel, and back returns to the pieces.
+        let listing = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Top'")).firstMatch
+        XCTAssertTrue(listing.waitForExistence(timeout: 30), "The panel should list the pieces")
+        listing.tap()
+        let store = app.descendants(matching: .any).matching(identifier: "store.web").firstMatch
+        XCTAssertTrue(store.waitForExistence(timeout: 5), "Store pages should open in the panel")
+        XCTAssertTrue(app.buttons["pin.close"].waitForNonExistence(timeout: 5), "The store page replaces the pieces")
+        sleep(3)
+        snapshot(app, "5e2-landscape-store")
+        app.buttons["BackButton"].tap()
+        XCTAssertTrue(close.waitForExistence(timeout: 5), "Back should return to the pieces")
+
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertTrue(app.buttons["Done"].waitForExistence(timeout: 5), "Portrait should show the open pin as a sheet")
+        snapshot(app, "5f-rotated-to-sheet")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(close.waitForExistence(timeout: 5), "Landscape should move the sheet back into the panel")
+        XCTAssertTrue(app.buttons["Done"].waitForNonExistence(timeout: 5))
+
+        close.tap()
+        XCTAssertTrue(close.waitForNonExistence(timeout: 5), "Close should dismiss the panel")
+        snapshot(app, "5g-landscape-closed")
     }
 
     /// iOS offers to save the new account's password in a system prompt.

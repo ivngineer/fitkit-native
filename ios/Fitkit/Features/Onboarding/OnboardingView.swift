@@ -84,6 +84,7 @@ struct ReferralSourceForm: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .readableContentWidth()
     }
 
     private func save(_ source: ReferralSource) {
@@ -160,6 +161,7 @@ struct PinterestHandleForm: View {
             .listRowInsets(EdgeInsets())
         }
         .navigationBarTitleDisplayMode(.inline)
+        .readableContentWidth()
         .onAppear {
             if handle.isEmpty { handle = model.user?.pinterestUsername ?? "" }
             isFocused = handle.isEmpty

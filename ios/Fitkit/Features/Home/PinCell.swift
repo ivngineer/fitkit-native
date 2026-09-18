@@ -3,12 +3,20 @@ import SwiftUI
 struct PinCell: View {
     let pin: Pin
     let imageURL: URL?
+    /// Marks the pin shown in the iPad side panel.
+    var isSelected = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             PinImage(url: imageURL, dominantColor: pin.dominantColor)
                 .aspectRatio(max(pin.aspectRatio, 0.3), contentMode: .fit)
                 .clipShape(.rect(cornerRadius: 16))
+                .overlay {
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(.primary, lineWidth: 3)
+                    }
+                }
 
             Text(pin.title)
                 .font(.caption.weight(.medium))
@@ -20,7 +28,7 @@ struct PinCell: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(pin.title)
         .accessibilityHint("Shows where to buy the items in this pin")
-        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 

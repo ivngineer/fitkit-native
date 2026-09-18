@@ -10,9 +10,13 @@ struct PinDetailView: View {
 
     /// Removes the pin from the grid; the sheet is dismissed by the caller.
     var onRemove: () -> Void
+    /// Set when the view sits in a side panel rather than a sheet. There's no
+    /// swipe to dismiss there, so a close button leads the toolbar instead.
+    var onClose: (() -> Void)?
 
-    init(pin: Pin, onRemove: @escaping () -> Void) {
+    init(pin: Pin, onClose: (() -> Void)? = nil, onRemove: @escaping () -> Void) {
         _model = State(initialValue: PinDetailModel(pin: pin))
+        self.onClose = onClose
         self.onRemove = onRemove
     }
 
@@ -21,9 +25,24 @@ struct PinDetailView: View {
             content
                 .navigationTitle("Shop This Look")
                 .navigationBarTitleDisplayMode(.inline)
+                // In the side panel a store page pushes in place, keeping the
+                // grid beside it. A sheet covers the screen with Safari.
+                .navigationDestination(item: browsingURL(inPanel: true)) { item in
+                    StoreWebView(url: item.url)
+                }
                 .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
+                    if let onClose {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button(action: onClose) {
+                                Label("Close", systemImage: "xmark")
+                            }
+                            .keyboardShortcut(.cancelAction)
+                            .accessibilityIdentifier("pin.close")
+                        }
+                    } else {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { dismiss() }
+                        }
                     }
                     ToolbarItem(placement: .topBarLeading) {
                         Menu {
@@ -61,12 +80,20 @@ struct PinDetailView: View {
         }
         .onAppear { model.start(api: app.api, app: app) }
         .onDisappear { model.cancel() }
-        .fullScreenCover(item: $browsingURL) { item in
+        .fullScreenCover(item: browsingURL(inPanel: false)) { item in
             SafariView(url: item.url).ignoresSafeArea()
         }
     }
 
     private var isInCart: Bool { cart.contains(model.pin) }
+
+    private func browsingURL(inPanel: Bool) -> Binding<IdentifiableURL?> {
+        Binding {
+            (onClose != nil) == inPanel ? browsingURL : nil
+        } set: {
+            browsingURL = $0
+        }
+    }
 
     private func toggleCart() {
         Task { await cart.toggle(model.pin, api: app.api, app: app) }
@@ -325,7 +352,7 @@ struct ListingRow: View {
     }
 }
 
-struct IdentifiableURL: Identifiable {
+struct IdentifiableURL: Identifiable, Hashable {
     let url: URL
     var id: String { url.absoluteString }
 }
