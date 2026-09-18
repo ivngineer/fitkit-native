@@ -17,6 +17,11 @@ struct HomeView: View {
             GeometryReader { geometry in
                 ScrollView {
                     VStack(spacing: 16) {
+                        if app.isOffline {
+                            OfflineBanner()
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+
                         if let job = model.visibleImportJob {
                             ImportStatusCard(job: job) {
                                 Task { await model.startImport(api: app.api, app: app) }
@@ -53,12 +58,14 @@ struct HomeView: View {
                                     Label(cart.contains(pin) ? "Remove from Cart" : "Add to Cart",
                                           systemImage: cart.contains(pin) ? "cart.badge.minus" : "cart.badge.plus")
                                 }
+                                .disabled(app.isOffline)
                                 Divider()
                                 Button(role: .destructive) {
                                     remove(pin)
                                 } label: {
                                     Label("Remove from Fitkit", systemImage: "eye.slash")
                                 }
+                                .disabled(app.isOffline)
                             }
                             .task { await model.loadMoreIfNeeded(after: pin, api: app.api, app: app) }
                             .accessibilityIdentifier("pin.\(pin.id)")
@@ -72,13 +79,17 @@ struct HomeView: View {
                     .padding(.horizontal, 12)
                     .padding(.bottom, 24)
                     .animation(.default, value: model.visibleImportJob?.id)
+                    .animation(.default, value: app.isOffline)
                 }
             }
             .overlay { emptyState }
             .overlay(alignment: .bottom) { removalNotice }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbar }
-            .refreshable { await model.refreshPins(api: app.api, app: app) }
+            .refreshable {
+                await app.retryConnection()
+                await model.refreshPins(api: app.api, app: app)
+            }
             .sheet(item: $selectedPin) { pin in
                 PinDetailView(pin: pin) {
                     selectedPin = nil
@@ -111,8 +122,17 @@ struct HomeView: View {
                 }
             }
         }
-        .task { await model.load(api: app.api, app: app) }
-        .task { await cart.load(api: app.api, app: app) }
+        // Runs at launch and again whenever the server comes back.
+        .task(id: app.reconnectCount) { await model.load(api: app.api, app: app) }
+        .task(id: app.reconnectCount) { await cart.load(api: app.api, app: app) }
+        .onChange(of: app.localDataResetCount) {
+            model.reset()
+            cart.clear()
+            Task {
+                await model.load(api: app.api, app: app)
+                await cart.load(api: app.api, app: app)
+            }
+        }
         .onDisappear { model.stopWatching() }
     }
 
@@ -149,7 +169,7 @@ struct HomeView: View {
             } label: {
                 Label("Import from Pinterest", systemImage: "arrow.triangle.2.circlepath")
             }
-            .disabled(app.user?.pinterestUsername == nil || model.importJob?.isActive == true)
+            .disabled(app.isOffline || app.user?.pinterestUsername == nil || model.importJob?.isActive == true)
         }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
@@ -203,8 +223,13 @@ struct HomeView: View {
                 } description: {
                     Text(error)
                 } actions: {
-                    Button("Try Again") { Task { await model.refreshPins(api: app.api, app: app) } }
-                        .buttonStyle(.bordered)
+                    Button("Try Again") {
+                        Task {
+                            await app.retryConnection()
+                            await model.refreshPins(api: app.api, app: app)
+                        }
+                    }
+                    .buttonStyle(.bordered)
                 }
             } else if app.user?.pinterestUsername == nil {
                 ContentUnavailableView {
@@ -214,6 +239,7 @@ struct HomeView: View {
                 } actions: {
                     Button("Connect Pinterest") { isConnectPresented = true }
                         .buttonStyle(.borderedProminent)
+                        .disabled(app.isOffline)
                         .accessibilityIdentifier("home.connect")
                 }
             } else if model.importJob?.isActive != true, model.visibleImportJob == nil {
@@ -224,9 +250,24 @@ struct HomeView: View {
                 } actions: {
                     Button("Import from Pinterest") { Task { await model.startImport(api: app.api, app: app) } }
                         .buttonStyle(.borderedProminent)
+                        .disabled(app.isOffline)
                 }
             }
         }
+    }
+}
+
+/// Says why buttons are greyed out while the server can't be reached.
+private struct OfflineBanner: View {
+    var body: some View {
+        Label("Offline. Showing pins saved on this device.", systemImage: "wifi.slash")
+            .font(.footnote.weight(.medium))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(.fill.tertiary, in: .capsule)
+            .frame(maxWidth: .infinity)
+            .accessibilityIdentifier("home.offline")
     }
 }
 

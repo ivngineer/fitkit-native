@@ -24,7 +24,8 @@ struct PinCell: View {
     }
 }
 
-/// Remote image with the pin's dominant color as a placeholder.
+/// Remote image with the pin's dominant color as a placeholder. Images are
+/// kept on the device, so ones seen before show up offline too.
 struct PinImage: View {
     let url: URL?
     var dominantColor: String = ""
@@ -41,19 +42,40 @@ struct PinImage: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .overlay {
-                AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.2))) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    case .failure:
-                        Image(systemName: "photo")
-                            .foregroundStyle(.secondary)
-                    default:
-                        Color.clear
-                    }
-                }
-            }
+            .overlay { StoredImage(url: url) }
             .clipped()
+    }
+}
+
+private struct StoredImage: View {
+    let url: URL?
+    @State private var image: UIImage?
+    @State private var failed = false
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else if failed {
+                Image(systemName: "photo")
+                    .foregroundStyle(.secondary)
+            } else {
+                Color.clear
+            }
+        }
+        .task(id: url) { await load() }
+    }
+
+    private func load() async {
+        image = nil
+        failed = false
+        guard let url else { return }
+        do {
+            let loaded = try await ImageCache.shared.image(for: url)
+            withAnimation(.easeOut(duration: 0.2)) { image = loaded }
+        } catch is CancellationError {
+        } catch {
+            failed = !Task.isCancelled
+        }
     }
 }

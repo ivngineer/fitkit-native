@@ -15,6 +15,12 @@ enum APIError: LocalizedError, Equatable {
         }
     }
 
+    /// The server couldn't be reached at all, as opposed to answering with an error.
+    var isNetwork: Bool {
+        if case .network = self { return true }
+        return false
+    }
+
     var code: String? {
         if case .server(_, let code, _) = self { return code }
         return nil
@@ -27,6 +33,9 @@ struct APIClient: Sendable {
     var baseURL: URL
     var token: String?
     var session: URLSession = .shared
+    /// Told after every request whether the server answered at all, so the
+    /// app can switch between online and offline browsing.
+    var onReachability: (@MainActor @Sendable (Bool) -> Void)?
 
     // MARK: Auth
 
@@ -154,8 +163,10 @@ struct APIClient: Sendable {
         } catch let error as URLError where error.code == .cancelled {
             throw CancellationError()
         } catch let error as URLError {
+            onReachability?(false)
             throw APIError.network(Self.describe(error))
         }
+        onReachability?(true)
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
         guard (200..<300).contains(http.statusCode) else {
             let serverError = try? Self.decoder.decode([String: ServerError].self, from: data)["error"]

@@ -28,7 +28,9 @@ struct CartView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .swipeActions {
-                                    Button("Remove", systemImage: "trash", role: .destructive) { toggle(pin) }
+                                    if !app.isOffline {
+                                        Button("Remove", systemImage: "trash", role: .destructive) { toggle(pin) }
+                                    }
                                 }
                                 .contextMenu {
                                     if let url = URL(string: pin.pinterestUrl) {
@@ -39,6 +41,7 @@ struct CartView: View {
                                     Button(role: .destructive) { toggle(pin) } label: {
                                         Label("Remove from Cart", systemImage: "cart.badge.minus")
                                     }
+                                    .disabled(app.isOffline)
                                 }
                             }
                         } footer: {

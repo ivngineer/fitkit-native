@@ -4,11 +4,7 @@ import SwiftUI
 struct FitkitApp: App {
     @State private var model = AppModel()
     @State private var cart = CartModel()
-
-    init() {
-        // Pin images are immutable, so a generous disk cache keeps the grid snappy.
-        URLCache.shared = URLCache(memoryCapacity: 64 << 20, diskCapacity: 512 << 20)
-    }
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -16,6 +12,10 @@ struct FitkitApp: App {
                 .environment(model)
                 .environment(cart)
                 .task { await model.bootstrap() }
+        }
+        // Coming back to the app is a good moment to look for the server.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await model.retryConnection() } }
         }
     }
 }

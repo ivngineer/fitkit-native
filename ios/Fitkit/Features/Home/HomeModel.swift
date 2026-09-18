@@ -22,8 +22,10 @@ final class HomeModel {
         return importJob
     }
 
-    /// Loads the first page and resumes watching any import in progress.
+    /// Shows the pins saved on this device right away, then loads the first
+    /// page and resumes watching any import in progress.
     func load(api: APIClient, app: AppModel) async {
+        if pins.isEmpty { showSaved(app.store) }
         await refreshPins(api: api, app: app)
         do {
             let job = try await api.latestImport()
@@ -46,12 +48,37 @@ final class HomeModel {
             pins = page.pins
             nextCursor = page.nextCursor
             loadError = nil
+            // Mid-import the grid refreshes every few seconds; copying the
+            // library once the import settles is plenty.
+            if importJob?.isActive != true { app.syncForOffline() }
         } catch is CancellationError {
             return
         } catch {
-            if !app.handleUnauthorized(error) { loadError = error.localizedDescription }
+            if !app.handleUnauthorized(error) {
+                loadError = error.localizedDescription
+                if (error as? APIError)?.isNetwork == true { showSaved(app.store) }
+            }
         }
         hasLoaded = true
+    }
+
+    /// Swaps in the device's copy when it holds more than the grid does,
+    /// which is always the case offline after a page or two.
+    private func showSaved(_ store: LocalStore) {
+        let saved = store.loadPins()
+        guard saved.count > pins.count else { return }
+        pins = saved
+        nextCursor = nil
+        hasLoaded = true
+    }
+
+    /// Forgets everything shown, after local data is cleared.
+    func reset() {
+        stopWatching()
+        pins = []
+        nextCursor = nil
+        hasLoaded = false
+        loadError = nil
     }
 
     func loadMoreIfNeeded(after pin: Pin, api: APIClient, app: AppModel) async {
@@ -65,7 +92,9 @@ final class HomeModel {
             pins.append(contentsOf: page.pins.filter { !known.contains($0.id) })
             nextCursor = page.nextCursor
         } catch {
-            app.handleUnauthorized(error)
+            if !app.handleUnauthorized(error), (error as? APIError)?.isNetwork == true {
+                showSaved(app.store)
+            }
         }
     }
 
@@ -88,6 +117,7 @@ final class HomeModel {
         pins.remove(at: index)
         do {
             try await api.hidePin(id: pin.id)
+            app.store.removePin(id: pin.id)
         } catch {
             pins.insert(pin, at: min(index, pins.count))
             if !app.handleUnauthorized(error) { loadError = error.localizedDescription }

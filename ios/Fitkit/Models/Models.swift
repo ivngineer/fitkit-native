@@ -76,8 +76,8 @@ struct ImportJob: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
-struct PinAnalysis: Decodable, Sendable {
-    enum Status: String, Decodable, Sendable {
+struct PinAnalysis: Codable, Sendable {
+    enum Status: String, Codable, Sendable {
         case none, queued, running, done, failed
     }
 
@@ -85,6 +85,9 @@ struct PinAnalysis: Decodable, Sendable {
     let status: Status
     let result: AnalysisResult?
     let error: ServerError?
+
+    /// Finished one way or the other, so it won't change until a new search.
+    var isSettled: Bool { status == .done || status == .failed }
 }
 
 struct AnalysisResult: Codable, Sendable {

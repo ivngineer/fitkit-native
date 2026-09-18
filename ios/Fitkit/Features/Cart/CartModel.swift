@@ -15,14 +15,19 @@ final class CartModel {
         pins.contains { $0.id == pin.id }
     }
 
+    /// Shows the cart saved on this device, then the server's.
     func load(api: APIClient, app: AppModel) async {
+        if !hasLoaded { pins = app.store.loadCart() }
         do {
             pins = try await api.cart().pins
+            app.store.saveCart(pins)
             error = nil
         } catch is CancellationError {
             return
         } catch {
-            if !app.handleUnauthorized(error) { self.error = error.localizedDescription }
+            // Offline the saved cart is the answer, not an error.
+            let isNetwork = (error as? APIError)?.isNetwork == true
+            if !app.handleUnauthorized(error), !isNetwork { self.error = error.localizedDescription }
         }
         hasLoaded = true
     }
@@ -42,12 +47,14 @@ final class CartModel {
                 self?.pins.removeAll { $0.id == pin.id }
             }
         }
+        app.store.saveCart(pins)
     }
 
     /// Hiding a pin from the grid drops it from the cart too: it's gone from
     /// the app, so leaving it queued for checkout would read as a bug.
     func removeFromFitkit(_ pin: Pin, api: APIClient, app: AppModel) async {
         await call(app: app) { try await api.hidePin(id: pin.id) } undo: {}
+        if error == nil { app.store.removePin(id: pin.id) }
         if contains(pin) { await toggle(pin, api: api, app: app) }
     }
 

@@ -33,12 +33,14 @@ struct PinDetailView: View {
                                 Label(isInCart ? "Remove from Cart" : "Add to Cart",
                                       systemImage: isInCart ? "cart.badge.minus" : "cart.badge.plus")
                             }
+                            .disabled(app.isOffline)
                             if case .loaded = model.state {
                                 Button {
                                     model.start(api: app.api, app: app, force: true)
                                 } label: {
                                     Label("Search Again", systemImage: "arrow.clockwise")
                                 }
+                                .disabled(app.isOffline)
                             }
                             if let url = URL(string: model.pin.pinterestUrl) {
                                 Link(destination: url) {
@@ -49,6 +51,7 @@ struct PinDetailView: View {
                             Button(role: .destructive, action: onRemove) {
                                 Label("Remove from Fitkit", systemImage: "eye.slash")
                             }
+                            .disabled(app.isOffline)
                         } label: {
                             Label("More", systemImage: "ellipsis.circle")
                         }
@@ -107,6 +110,17 @@ struct PinDetailView: View {
                     .accessibilityIdentifier("pin.remove")
                     Button("Search Again") { model.start(api: app.api, app: app, force: true) }
                 }
+                .disabled(app.isOffline)
+            }
+
+        case .offline:
+            ContentUnavailableView {
+                Label("You're Offline", systemImage: "wifi.slash")
+            } description: {
+                Text("This pin hasn't been broken down on this device yet. Connect to see its pieces.")
+            } actions: {
+                Button("Try Again") { model.start(api: app.api, app: app) }
+                    .buttonStyle(.borderedProminent)
             }
 
         case .failed(let message, let canRetry):
@@ -118,6 +132,7 @@ struct PinDetailView: View {
                 if canRetry {
                     Button("Try Again") { model.start(api: app.api, app: app, force: true) }
                         .buttonStyle(.borderedProminent)
+                        .disabled(app.isOffline)
                 }
             }
 

@@ -10,6 +10,8 @@ final class PinDetailModel {
         case failed(message: String, canRetry: Bool)
         /// Detection ran and found nothing wearable, so the pin isn't shoppable.
         case noItems(message: String)
+        /// The server can't be reached and this device has no saved breakdown.
+        case offline
     }
 
     private(set) var state: State = .loading
@@ -37,7 +39,14 @@ final class PinDetailModel {
 
     /// Starts (or joins) the server-side analysis and polls until it settles.
     func run(api: APIClient, app: AppModel, force: Bool = false) async {
-        state = force ? .analyzing : .loading
+        // A breakdown saved on this device shows at once and stays up if the
+        // server can't be reached.
+        let saved = force ? nil : app.store.loadAnalysis(pinID: pin.id)
+        if let saved {
+            apply(saved)
+        } else {
+            state = force ? .analyzing : .loading
+        }
         do {
             var analysis = try await api.analysis(pinID: pin.id)
             if force || analysis.status == .none || analysis.status == .failed {
@@ -55,10 +64,15 @@ final class PinDetailModel {
                 analysis = try await api.analysis(pinID: pin.id)
             }
             apply(analysis)
+            app.store.saveAnalysis(analysis)
         } catch is CancellationError {
             return
         } catch {
             if app.handleUnauthorized(error) { return }
+            if (error as? APIError)?.isNetwork == true {
+                if saved == nil { state = .offline }
+                return
+            }
             state = .failed(message: error.localizedDescription, canRetry: true)
         }
     }

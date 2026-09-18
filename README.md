@@ -48,6 +48,10 @@ xcrun devicectl device process launch --device <device UDID> app.fitkit.Fitkit
 
 `xcrun devicectl list devices` prints the UDIDs of paired devices, network ones included. The `$()` in the URL keeps Xcode from reading `//` as a comment.
 
+### Offline browsing
+
+Once someone has signed in on a device, the app keeps a copy of their account, pins, cart, each pin's pieces and shopping links, and the images it shows, under `Library/Application Support/Offline` in the app's container (left out of backups). While the server is reachable, a background sync copies the whole library after the grid loads. When the server can't be reached, the app opens straight to that copy, shows an offline banner, and turns off anything that needs the server; it checks back with backoff and when the app returns to the foreground. **Account → Offline → Clear Local Data** deletes the copy without touching the account; signing out deletes all of it.
+
 ### Resetting the data
 
 `server/reset-data.sh` deletes the SQLite database and the cached images under `FITKIT_DATA_DIR`, leaving a clean server for a fresh demo. It refuses to run while a server is listening on `FITKIT_ADDR`, asks before deleting, and takes `--yes` to skip the prompt and `--keep-media` to keep the image cache.

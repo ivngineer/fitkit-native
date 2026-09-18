@@ -7,14 +7,22 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isConfirmingDelete = false
     @State private var isDeleting = false
+    @State private var isConfirmingClear = false
+    @State private var localDataSize: Int64?
     @State private var errorMessage: String?
     @State private var serverURL = ""
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Account") {
+                Section {
                     LabeledContent("Email", value: app.user?.email ?? "")
+                } header: {
+                    Text("Account")
+                } footer: {
+                    if app.isOffline {
+                        Text("You're offline. Changes to your account need a connection to the Fitkit server.")
+                    }
                 }
 
                 Section {
@@ -25,11 +33,12 @@ struct SettingsView: View {
                             Text(app.user?.pinterestUsername.map { "@\($0)" } ?? "Not connected")
                         }
                     }
+                    .disabled(app.isOffline)
                     Button("Import Saves Now") {
                         dismiss()
                         onImport()
                     }
-                    .disabled(app.user?.pinterestUsername == nil)
+                    .disabled(app.isOffline || app.user?.pinterestUsername == nil)
                 } header: {
                     Text("Pinterest")
                 } footer: {
@@ -44,6 +53,25 @@ struct SettingsView: View {
                             Text(app.user?.referralSource.flatMap(ReferralSource.init(rawValue:))?.title ?? "Not set")
                         }
                     }
+                    .disabled(app.isOffline)
+                }
+
+                Section {
+                    LabeledContent("Saved on This Device") {
+                        if let localDataSize {
+                            Text(localDataSize, format: .byteCount(style: .file))
+                        } else {
+                            ProgressView()
+                        }
+                    }
+                    Button("Clear Local Data", role: .destructive) {
+                        isConfirmingClear = true
+                    }
+                    .accessibilityIdentifier("settings.clearLocalData")
+                } header: {
+                    Text("Offline")
+                } footer: {
+                    Text("Your pins, their pieces and shopping links are kept on this device so you can browse without a connection. Clearing them frees up space and doesn't change anything in your account.")
                 }
 
                 #if DEBUG
@@ -67,7 +95,7 @@ struct SettingsView: View {
                     Button("Delete Account", role: .destructive) {
                         isConfirmingDelete = true
                     }
-                    .disabled(isDeleting)
+                    .disabled(isDeleting || app.isOffline)
                 } footer: {
                     if let errorMessage {
                         Text(errorMessage).foregroundStyle(.red)
@@ -86,8 +114,23 @@ struct SettingsView: View {
             } message: {
                 Text("Your account and saved pins will be permanently removed. This can't be undone.")
             }
+            .confirmationDialog("Clear local data?", isPresented: $isConfirmingClear, titleVisibility: .visible) {
+                Button("Clear Local Data", role: .destructive, action: clearLocalData)
+            } message: {
+                Text("Pins, their pieces and shopping links will be removed from this device. Everything stays in your Fitkit account and downloads again when you're online.")
+            }
             .onAppear { serverURL = app.baseURL.absoluteString }
+            .task(id: app.localDataResetCount) { await measureLocalData() }
         }
+    }
+
+    private func clearLocalData() {
+        app.clearLocalData()
+    }
+
+    private func measureLocalData() async {
+        let root = app.store.root
+        localDataSize = await Task.detached { LocalStore.size(of: root) }.value
     }
 
     private func deleteAccount() {

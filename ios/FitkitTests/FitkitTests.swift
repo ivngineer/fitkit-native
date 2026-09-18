@@ -251,21 +251,24 @@ nonisolated final class CartStubURLProtocol: URLProtocol, @unchecked Sendable {
 
     @MainActor @Test func togglesAddAndRemove() async {
         let cart = CartModel()
-        let app = AppModel(defaults: UserDefaults(suiteName: "cart-toggle")!)
+        let app = AppModel(defaults: UserDefaults(suiteName: "cart-toggle")!, store: .temporary())
         CartStubURLProtocol.handler = { _ in (204, "") }
 
         await cart.toggle(pin, api: client(), app: app)
         #expect(cart.contains(pin))
         #expect(cart.count == 1)
 
+        #expect(app.store.loadCart().map(\.id) == ["p1"])
+
         await cart.toggle(pin, api: client(), app: app)
         #expect(!cart.contains(pin))
         #expect(cart.error == nil)
+        #expect(app.store.loadCart().isEmpty)
     }
 
     @MainActor @Test func putsThePinBackWhenTheServerFails() async {
         let cart = CartModel()
-        let app = AppModel(defaults: UserDefaults(suiteName: "cart-rollback")!)
+        let app = AppModel(defaults: UserDefaults(suiteName: "cart-rollback")!, store: .temporary())
         CartStubURLProtocol.handler = { _ in (500, #"{"error":{"code":"internal","message":"Something went wrong. Try again."}}"#) }
 
         await cart.toggle(pin, api: client(), app: app)
