@@ -72,6 +72,7 @@ func NewService(cfg config.Config, st *store.Store, pinsDir, cropsDir string, lo
 	s.Pipeline = &Pipeline{
 		Detector: &Gemini{APIKey: cfg.GeminiAPIKey, Model: cfg.GeminiModel, Fallbacks: cfg.GeminiFallbackModels},
 		Uploader: &Imgbb{APIKey: cfg.ImgbbAPIKey, Expiration: 24 * 60 * 60},
+		Crops:    &LocalUploader{Dir: cropsDir, URLPrefix: "/media/crops/"},
 		Searcher: searcher,
 	}
 	return s
@@ -121,9 +122,27 @@ func (s *Service) Get(ctx context.Context, pinID string) (Status, error) {
 		if err := json.Unmarshal([]byte(a.ResultJSON), &r); err != nil {
 			return Status{}, err
 		}
+		dropExpiredCrops(&r, a.UpdatedAt)
 		st.Result = &r
 	}
 	return st, nil
+}
+
+// imgbbLifetime is how long crops hosted for search stay online.
+const imgbbLifetime = 24 * time.Hour
+
+// dropExpiredCrops clears crop links that analyses from before local crop
+// copies point at on the image host, once the host has deleted them, so the
+// app shows the store's thumbnail instead of a broken image.
+func dropExpiredCrops(r *Result, analyzedAt time.Time) {
+	if time.Since(analyzedAt) < imgbbLifetime-time.Hour {
+		return
+	}
+	for i := range r.Items {
+		if strings.HasPrefix(r.Items[i].CropURL, "https://i.ibb.co/") {
+			r.Items[i].CropURL = ""
+		}
+	}
 }
 
 // Start kicks off analysis unless one is running or already succeeded.

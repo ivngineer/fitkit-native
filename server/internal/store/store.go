@@ -128,6 +128,55 @@ CREATE TABLE IF NOT EXISTS pin_analyses (
 	created_at    INTEGER NOT NULL,
 	updated_at    INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS addresses (
+	id            TEXT PRIMARY KEY,
+	user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	kind          TEXT NOT NULL,
+	label         TEXT NOT NULL DEFAULT '',
+	country       TEXT NOT NULL,
+	forwarder     TEXT NOT NULL DEFAULT '',
+	final_country TEXT NOT NULL,
+	fields_json   TEXT NOT NULL,
+	is_default    INTEGER NOT NULL DEFAULT 0,
+	created_at    INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS addresses_by_user ON addresses(user_id, created_at);
+
+CREATE TABLE IF NOT EXISTS size_profiles (
+	user_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	category TEXT NOT NULL,
+	size     TEXT NOT NULL,
+	PRIMARY KEY (user_id, category)
+);
+
+CREATE TABLE IF NOT EXISTS looks (
+	id         TEXT PRIMARY KEY,
+	user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	pin_id     TEXT NOT NULL REFERENCES pins(id) ON DELETE CASCADE,
+	plan_json  TEXT NOT NULL,
+	created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS looks_by_user ON looks(user_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS look_stores (
+	look_id     TEXT NOT NULL REFERENCES looks(id) ON DELETE CASCADE,
+	merchant    TEXT NOT NULL,
+	position    INTEGER NOT NULL DEFAULT 0,
+	status      TEXT NOT NULL,
+	order_ref   TEXT NOT NULL DEFAULT '',
+	tracking_no TEXT NOT NULL DEFAULT '',
+	carrier     TEXT NOT NULL DEFAULT '',
+	updated_at  INTEGER NOT NULL,
+	PRIMARY KEY (look_id, merchant)
+);
+
+-- Cache of fetched store data (e.g. Shopify product JSON), keyed by URL.
+CREATE TABLE IF NOT EXISTS shop_cache (
+	key        TEXT PRIMARY KEY,
+	body       TEXT NOT NULL,
+	fetched_at INTEGER NOT NULL
+);
 `
 
 func (s *Store) migrate(ctx context.Context) error {

@@ -90,7 +90,12 @@ const (
 
 type Pipeline struct {
 	Detector Detector
+	// Uploader hosts crops for visual search.
 	Uploader Uploader
+	// Crops keeps a lasting copy of each crop for the app to show, when the
+	// search host deletes its copies after a while. Nil shows the
+	// Uploader's copy.
+	Crops    Uploader
 	Searcher VisualSearcher
 	Demo     bool
 }
@@ -179,6 +184,11 @@ func (p *Pipeline) processItem(ctx context.Context, src image.Image, index int, 
 		return item
 	}
 	item.CropURL = url
+	if p.Crops != nil {
+		if local, err := p.Crops.Upload(ctx, crop, item.ID+".jpg"); err == nil {
+			item.CropURL = local
+		}
+	}
 	listings, err := p.Searcher.Search(ctx, url, d)
 	if err != nil {
 		item.Error = "Visual search failed for this item."

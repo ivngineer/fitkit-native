@@ -392,3 +392,33 @@ func TestGeminiGivesUpOnPermanentFailures(t *testing.T) {
 		t.Errorf("calls = %d, want 1", calls)
 	}
 }
+
+func TestLocalCropCopy(t *testing.T) {
+	p := &Pipeline{
+		Detector: fakeDetector{detections: []Detection{{Label: "Coat", Category: "outerwear", Box: Box{X: 0.1, Y: 0.1, Width: 0.6, Height: 0.6}}}},
+		Uploader: &fakeUploader{uploads: map[string][]byte{}},
+		Crops:    &LocalUploader{Dir: t.TempDir(), URLPrefix: "/media/crops/"},
+		Searcher: fakeSearcher{},
+	}
+	r, err := p.Run(context.Background(), testutil.JPEG(t, 200, 200), "image/jpeg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(r.Items[0].CropURL, "/media/crops/item-1-") {
+		t.Errorf("crop url = %q, want the local copy", r.Items[0].CropURL)
+	}
+}
+
+func TestDropExpiredCrops(t *testing.T) {
+	fresh := Result{Items: []Item{{CropURL: "https://i.ibb.co/x/item-1.jpg"}, {CropURL: "/media/crops/a.jpg"}}}
+	dropExpiredCrops(&fresh, time.Now().Add(-time.Hour))
+	if fresh.Items[0].CropURL == "" {
+		t.Error("fresh imgbb crop dropped")
+	}
+	old := fresh
+	old.Items = append([]Item(nil), fresh.Items...)
+	dropExpiredCrops(&old, time.Now().Add(-30*time.Hour))
+	if old.Items[0].CropURL != "" || old.Items[1].CropURL != "/media/crops/a.jpg" {
+		t.Errorf("old = %+v", old.Items)
+	}
+}

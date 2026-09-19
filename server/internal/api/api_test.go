@@ -16,6 +16,7 @@ import (
 	"fitkit/server/internal/config"
 	"fitkit/server/internal/importer"
 	"fitkit/server/internal/pinterest"
+	"fitkit/server/internal/shop"
 	"fitkit/server/internal/testutil"
 )
 
@@ -78,6 +79,7 @@ func newTestServer(t *testing.T, cfg config.Config) *client {
 	srv := &Server{
 		Store: st, Importer: imp, MediaDir: mediaDir, SessionTTL: time.Hour, Log: log,
 		Analysis: analyze.NewService(cfg, st, filepath.Join(mediaDir, "pins"), filepath.Join(mediaDir, "crops"), log),
+		Shop:     &shop.Service{Cache: st, Demo: cfg.DemoAnalysis},
 	}
 	ts := httptest.NewServer(srv.Handler())
 	t.Cleanup(ts.Close)

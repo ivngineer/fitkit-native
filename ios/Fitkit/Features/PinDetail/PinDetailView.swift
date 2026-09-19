@@ -7,6 +7,8 @@ struct PinDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: PinDetailModel
     @State private var browsingURL: IdentifiableURL?
+    /// Set while the "Get this look" builder is pushed.
+    @State private var lookResult: AnalysisResult?
 
     /// Removes the pin from the grid; the sheet is dismissed by the caller.
     var onRemove: () -> Void
@@ -29,6 +31,11 @@ struct PinDetailView: View {
                 // grid beside it. A sheet covers the screen with Safari.
                 .navigationDestination(item: browsingURL(inPanel: true)) { item in
                     StoreWebView(url: item.url)
+                }
+                .navigationDestination(isPresented: isBuildingLook) {
+                    if let lookResult {
+                        LookBuilderView(pin: model.pin, result: lookResult)
+                    }
                 }
                 .toolbar {
                     if let onClose {
@@ -86,6 +93,10 @@ struct PinDetailView: View {
     }
 
     private var isInCart: Bool { cart.contains(model.pin) }
+
+    private var isBuildingLook: Binding<Bool> {
+        Binding { lookResult != nil } set: { if !$0 { lookResult = nil } }
+    }
 
     private func browsingURL(inPanel: Bool) -> Binding<IdentifiableURL?> {
         Binding {
@@ -186,21 +197,23 @@ struct PinDetailView: View {
             }
             .listStyle(.insetGrouped)
             .contentMargins(.bottom, 96, for: .scrollContent)
-            .overlay(alignment: .bottom) { buyOutfitBar(total: result.outfitTotal) }
+            .overlay(alignment: .bottom) { buyOutfitBar(result: result) }
         }
     }
 
-    /// Checkout isn't wired up yet. The button is here so the layout settles
-    /// around it before one-tap buy and ship arrives.
+    /// Pushes the "Get this look" builder, which walks pieces, sizes and an
+    /// address, then shows `CheckoutPlanView` once a plan comes back.
     ///
     /// The pill sits low, inset about as far from the sides as from the bottom
     /// so it follows the rounded screen corners, over a fade to dark that
     /// keeps it readable above the list.
-    private func buyOutfitBar(total: String?) -> some View {
-        Button {
+    private func buyOutfitBar(result: AnalysisResult) -> some View {
+        let total = result.outfitTotal
+        return Button {
+            lookResult = result
         } label: {
             HStack(spacing: 8) {
-                Text("Buy Outfit")
+                Text("Get This Look")
                 if let total {
                     Text("·").foregroundStyle(.black.opacity(0.35))
                     Text(total).monospacedDigit()
@@ -213,6 +226,7 @@ struct PinDetailView: View {
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)
+        .disabled(app.isOffline)
         .accessibilityIdentifier("pin.buyOutfit")
         .padding(.horizontal, 22)
         .padding(.bottom, 20)

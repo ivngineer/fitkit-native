@@ -26,6 +26,22 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    NavigationLink { OrdersView() } label: { Text("Orders") }
+                        .disabled(app.isOffline)
+                        .accessibilityIdentifier("settings.orders")
+                    NavigationLink { AddressesView() } label: { Text("Addresses") }
+                        .disabled(app.isOffline)
+                        .accessibilityIdentifier("settings.addresses")
+                    NavigationLink { SizesView() } label: { Text("Sizes") }
+                        .disabled(app.isOffline)
+                        .accessibilityIdentifier("settings.sizes")
+                } header: {
+                    Text("Shopping")
+                } footer: {
+                    Text("Some store links may earn Fitkit a commission. It never changes your price. You always pay the store directly.")
+                }
+
+                Section {
                     NavigationLink {
                         PinterestHandleForm { dismiss(); onImport() }
                     } label: {

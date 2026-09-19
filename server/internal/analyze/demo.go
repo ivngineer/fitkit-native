@@ -40,11 +40,17 @@ func (DemoSearcher) Search(_ context.Context, imageURL string, _ Detection) ([]L
 	price := func(v float64, s string) (*float64, string) { return &v, s }
 	p1, s1 := price(39.90, "$39.90")
 	p2, s2 := price(64.00, "$64.00")
+	// A made-up Shopify store (served without network in demo mode), an
+	// Amazon listing and a plain store search, one per checkout method.
 	return []Listing{
-		{Title: "Search “" + label + "” on Google Shopping", Merchant: "Google Shopping", URL: "https://www.google.com/search?tbm=shop&q=" + q, PriceValue: p1, Price: s1, Currency: "USD"},
-		{Title: "Search “" + label + "” on Nordstrom", Merchant: "Nordstrom", URL: "https://www.nordstrom.com/sr?keyword=" + q, PriceValue: p2, Price: s2, Currency: "USD"},
+		{Title: "Demo " + label, Merchant: "Fitkit Demo Shop", URL: "https://demo-shop.fitkit.example/products/demo-" + label, PriceValue: p1, Price: s1, Currency: "USD"},
+		{Title: "Demo " + label + " on Amazon", Merchant: "Amazon", URL: "https://www.amazon.com/dp/B0DEMO000" + demoASINDigit(label) + "?psc=1", PriceValue: p2, Price: s2, Currency: "USD"},
 		{Title: "Search “" + label + "” on Zara", Merchant: "Zara", URL: "https://www.zara.com/us/en/search?searchTerm=" + q},
 	}, nil
+}
+
+func demoASINDigit(label string) string {
+	return string(rune('0' + len(label)%10))
 }
 
 // SearchLinks builds store search links from the detected item's text. It

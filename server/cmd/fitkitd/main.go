@@ -17,6 +17,7 @@ import (
 	"fitkit/server/internal/config"
 	"fitkit/server/internal/importer"
 	"fitkit/server/internal/pinterest"
+	"fitkit/server/internal/shop"
 	"fitkit/server/internal/store"
 )
 
@@ -73,6 +74,12 @@ func run(log *slog.Logger) error {
 		Addr: cfg.Addr,
 		Handler: (&api.Server{
 			Store: st, Importer: imp, Analysis: analysis, MediaDir: mediaDir, SessionTTL: cfg.SessionTTL, Log: log,
+			Shop: &shop.Service{
+				Cache:     st,
+				Affiliate: shop.Affiliate{AmazonTags: cfg.AmazonTags, AliExpressKey: cfg.AliExpressKey, SkimlinksID: cfg.SkimlinksID},
+				ShopPay:   cfg.ShopPay,
+				Demo:      cfg.DemoAnalysis,
+			},
 		}).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

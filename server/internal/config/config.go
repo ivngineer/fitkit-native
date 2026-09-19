@@ -37,6 +37,15 @@ type Config struct {
 	ScrapingdogAPIKey string
 	SearchAPIKey      string
 
+	// Affiliate programs. All optional; links go out untagged without them.
+	// AmazonTags maps an Amazon site's TLD ("com", "de", "co.uk") to its
+	// Associates tag, from AMAZON_ASSOCIATE_TAG_<SITE>.
+	AmazonTags    map[string]string
+	AliExpressKey string
+	SkimlinksID   string
+	// ShopPay sends Shopify checkouts to Shop Pay.
+	ShopPay bool
+
 	// DemoAnalysis swaps the paid providers for deterministic placeholder
 	// output so the app can be exercised without API keys.
 	DemoAnalysis bool
@@ -62,8 +71,30 @@ func Load() Config {
 		ScrapingdogAPIKey: env("SCRAPINGDOG_API_KEY", ""),
 		SearchAPIKey:      env("SEARCHAPI_API_KEY", ""),
 
+		AmazonTags:    amazonTags(),
+		AliExpressKey: env("ALIEXPRESS_AFFILIATE_KEY", ""),
+		SkimlinksID:   env("SKIMLINKS_PUBLISHER_ID", ""),
+		ShopPay:       envBool("SHOPIFY_SHOP_PAY", true),
+
 		DemoAnalysis: envBool("FITKIT_DEMO_ANALYSIS", false),
 	}
+}
+
+// amazonSites maps the suffix of AMAZON_ASSOCIATE_TAG_<SITE> to the Amazon
+// site's TLD.
+var amazonSites = map[string]string{
+	"US": "com", "UK": "co.uk", "DE": "de", "FR": "fr", "IT": "it", "ES": "es",
+	"NL": "nl", "PL": "pl", "SE": "se", "BE": "com.be", "IE": "ie",
+}
+
+func amazonTags() map[string]string {
+	tags := map[string]string{}
+	for site, tld := range amazonSites {
+		if tag := env("AMAZON_ASSOCIATE_TAG_"+site, ""); tag != "" {
+			tags[tld] = tag
+		}
+	}
+	return tags
 }
 
 func env(key, fallback string) string {

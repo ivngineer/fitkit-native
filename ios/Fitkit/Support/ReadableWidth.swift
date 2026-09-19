@@ -14,8 +14,16 @@ private struct ReadableContentWidth: ViewModifier {
     @State private var width: CGFloat = 0
 
     func body(content: Content) -> some View {
-        content
-            .contentMargins(.horizontal, max(0, (width - maxWidth) / 2), for: .scrollContent)
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        Group {
+            // Only set margins when there's room to spare: an explicit zero
+            // margin stretches a grouped form edge to edge, with square rows
+            // and full-width separators.
+            if width > maxWidth {
+                content.contentMargins(.horizontal, (width - maxWidth) / 2, for: .scrollContent)
+            } else {
+                content
+            }
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
     }
 }

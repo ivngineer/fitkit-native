@@ -121,9 +121,18 @@ Analysis only ever runs when someone opens a pin, never in batch during an impor
 In the app it's a destructive quick action on every grid pin (long press), and the same action is offered inside a pin's popup — both in its menu and as the main button when detection finds nothing wearable. The first two removals show a dismissable note that the pin is still in the person's Pinterest account.
 
 ### Cart
-`PUT /v1/cart/{id}` sets a saved pin aside to buy, `DELETE` takes it back out, and `GET /v1/cart` lists the cart newest first in the same shape as `GET /v1/pins`. Hiding a pin from the grid leaves it in the cart, since adding it was a buying decision. Checkout itself (one-tap buy and ship) isn't built yet; the cart is where it will hang off.
+`PUT /v1/cart/{id}` sets a saved pin aside to buy, `DELETE` takes it back out, and `GET /v1/cart` lists the cart newest first in the same shape as `GET /v1/pins`. Hiding a pin from the grid leaves it in the cart, since adding it was a buying decision.
 
-In the app the cart lives between the sync and account buttons in the header, badged with its count, and opens as a half-height sheet that drags up to full screen. Tapping a row there opens the same breakdown sheet the grid opens, and removing a pin from Fitkit there also takes it out of the cart. "Shop This Look" carries a full-width Buy Outfit button at the bottom; it's a placeholder until checkout exists.
+In the app the cart lives between the sync and account buttons in the header, badged with its count, and opens as a half-height sheet that drags up to full screen. Tapping a row there opens the same breakdown sheet the grid opens, and removing a pin from Fitkit there also takes it out of the cart. "Shop This Look" carries a full-width Get This Look button at the bottom that starts checkout.
+
+### Checkout (`internal/shop`)
+Fitkit takes no payment and isn't the seller; see [mvp-plan.md](mvp-plan.md). The server turns the pieces a user picks into one checkout link per store, and the user pays each store directly.
+
+- **Classification**: every listing URL is unwrapped from redirectors and classified as `shopify_cart` (confirmed by loading the store's public `/products/<handle>.js`), `amazon_cart`, `affiliate_link` or `product_page`. Shopify product and `/meta.json` lookups are cached in SQLite for 6 hours, and only go to public HTTPS addresses.
+- **Plan** (`POST /v1/looks`): the request only names pieces and listings; each must exist in the pin's stored analysis, so links and prices always come from the analysis or the store, never the app. Shopify items need a variant (sizes must be in stock) and go into a cart permalink with the user's email and shipping address filled in. Amazon items go into an add-to-cart link when an Associates tag is set for that site and the URL already points at one size (`psc=1`) or the piece isn't sized. Everything else opens its product page, tagged when an affiliate program is configured.
+- **Shipping**: addresses are `home`, `np_branch` (Nova Poshta, Ukraine) or `forwarder` (NP Shopping, Meest, Ukraine Express). For a Ukrainian address the server checks whether the store ships there (hand-kept table in `internal/shop/merchants.json`, then the Shopify store's own list) and otherwise routes the order to the user's forwarder warehouse: US stores to the US one, others to Poland. Plans warn about EU duty from non-EU stores and Ukraine's €150 threshold.
+- **Orders**: the user marks each store ordered, shipped, delivered or skipped and can add an order and tracking number; known carriers get a tracking link.
+- **Affiliate tags** come from `AMAZON_ASSOCIATE_TAG_<SITE>`, `ALIEXPRESS_AFFILIATE_KEY` and `SKIMLINKS_PUBLISHER_ID`; all optional. In demo mode, listings from `*.fitkit.example` act as a Shopify store without any network calls.
 
 ## API
 
@@ -141,6 +150,13 @@ In the app the cart lives between the sync and account buttons in the header, ba
 | GET | `/v1/cart` | pins set aside to buy, newest first |
 | PUT / DELETE | `/v1/cart/{id}` | add a saved pin to the cart, or take it out |
 | GET / POST | `/v1/pins/{id}/analysis` | status or start (`?force=true` re-runs) |
+| GET / POST | `/v1/addresses` | address book; the first address becomes the default |
+| PUT / DELETE | `/v1/addresses/{id}` | edit or remove an address |
+| GET / PUT | `/v1/sizes` | `{sizes: {category: size}}`, replaced as a whole |
+| POST | `/v1/listings/options` | `{pinId, urls}` → checkout method and Shopify variants per listing of that pin |
+| POST | `/v1/looks` | `{pinId, addressId?, items: [{itemId, listingUrl, variantId?, size?, quantity}]}` → look with its checkout plan |
+| GET | `/v1/looks`, `/v1/looks/{id}` | orders, newest first |
+| PUT | `/v1/looks/{id}/stores/{merchant}` | `{status, orderRef?, trackingNo?, carrier?}` |
 | GET | `/media/...` | pin images and demo crops |
 
 Authenticated routes take `Authorization: Bearer <token>`. Errors come back as `{"error": {"code", "message"}}`.

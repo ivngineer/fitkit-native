@@ -4,7 +4,7 @@ Goal: get as close to "tap the outfit, it arrives at my door" as possible **with
 
 This is the bridge to the full plan in [plan.md](plan.md). The app flow built here ("Get this look" to checkout to order tracking) stays the same when Fitkit later becomes the merchant of record; only the step behind the "Checkout" button changes.
 
-Status: not implemented. Research date 18 September 2026.
+Status: milestones 1–5 implemented (19 September 2026); region-aware search (6) not yet. Research date 18 September 2026.
 
 ## 1. Constraints and ground rules
 

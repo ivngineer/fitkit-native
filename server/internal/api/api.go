@@ -18,6 +18,7 @@ import (
 	"fitkit/server/internal/auth"
 	"fitkit/server/internal/importer"
 	"fitkit/server/internal/pinterest"
+	"fitkit/server/internal/shop"
 	"fitkit/server/internal/store"
 )
 
@@ -25,6 +26,7 @@ type Server struct {
 	Store      *store.Store
 	Importer   *importer.Importer
 	Analysis   *analyze.Service
+	Shop       *shop.Service
 	MediaDir   string
 	SessionTTL time.Duration
 	Log        *slog.Logger
@@ -59,6 +61,11 @@ func (s *Server) Handler() http.Handler {
 
 	mux.HandleFunc("GET /v1/pins/{id}/analysis", s.authed(s.getAnalysis))
 	mux.HandleFunc("POST /v1/pins/{id}/analysis", s.authed(s.startAnalysis))
+
+	if s.Shop == nil {
+		s.Shop = &shop.Service{Cache: s.Store}
+	}
+	s.checkoutRoutes(mux)
 
 	mux.Handle("GET /media/", http.StripPrefix("/media/", noDirListing(http.FileServer(http.Dir(s.MediaDir)))))
 	return s.logRequests(mux)

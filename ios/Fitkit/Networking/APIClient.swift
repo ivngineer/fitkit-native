@@ -129,6 +129,62 @@ struct APIClient: Sendable {
         return try await send("POST", "/v1/pins/\(pinID)/analysis", query: query)
     }
 
+    // MARK: Checkout
+
+    func addresses() async throws -> [Address] {
+        let page: AddressList = try await send("GET", "/v1/addresses")
+        return page.addresses
+    }
+
+    func createAddress(_ address: Address) async throws -> Address {
+        try await send("POST", "/v1/addresses", json: address)
+    }
+
+    func updateAddress(_ address: Address) async throws -> Address {
+        try await send("PUT", "/v1/addresses/\(address.id)", json: address)
+    }
+
+    func deleteAddress(id: String) async throws {
+        try await sendEmpty("DELETE", "/v1/addresses/\(id)")
+    }
+
+    /// Remembered sizes, keyed by `SizeCategory` raw value.
+    func sizes() async throws -> [String: String] {
+        let profile: SizeProfile = try await send("GET", "/v1/sizes")
+        return profile.sizes
+    }
+
+    func setSizes(_ sizes: [String: String]) async throws -> [String: String] {
+        let profile: SizeProfile = try await send("PUT", "/v1/sizes", json: SizeProfile(sizes: sizes))
+        return profile.sizes
+    }
+
+    /// How each listing checks out and, for Shopify stores, its variants.
+    func listingOptions(pinID: String, urls: [String]) async throws -> [ListingOptions] {
+        struct Body: Encodable { let pinId: String; let urls: [String] }
+        struct Response: Decodable { let options: [ListingOptions] }
+        let response: Response = try await send("POST", "/v1/listings/options", json: Body(pinId: pinID, urls: urls))
+        return response.options
+    }
+
+    func createLook(_ request: LookRequest) async throws -> Look {
+        try await send("POST", "/v1/looks", json: request)
+    }
+
+    func looks() async throws -> [Look] {
+        struct Response: Decodable { let looks: [Look] }
+        let response: Response = try await send("GET", "/v1/looks")
+        return response.looks
+    }
+
+    func look(id: String) async throws -> Look {
+        try await send("GET", "/v1/looks/\(id)")
+    }
+
+    func updateLookStore(lookID: String, merchant: String, _ update: LookStoreUpdate) async throws -> LookStore {
+        try await send("PUT", "/v1/looks/\(lookID)/stores/\(merchant)", json: update)
+    }
+
     /// Resolves server-relative media paths ("/media/…") and absolute URLs.
     func resolve(_ path: String?) -> URL? {
         guard let path, !path.isEmpty else { return nil }
@@ -137,7 +193,7 @@ struct APIClient: Sendable {
 
     // MARK: Transport
 
-    private func request(_ method: String, _ path: String, query: [URLQueryItem], body: [String: String]?) throws -> URLRequest {
+    private func request(_ method: String, _ path: String, query: [URLQueryItem], body: (any Encodable)?) throws -> URLRequest {
         guard var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false) else {
             throw APIError.invalidResponse
         }
@@ -150,7 +206,7 @@ struct APIClient: Sendable {
         if let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         if let body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONEncoder().encode(body)
+            request.httpBody = try Self.encoder.encode(body)
         }
         return request
     }
@@ -178,6 +234,10 @@ struct APIClient: Sendable {
     }
 
     private func send<T: Decodable>(_ method: String, _ path: String, query: [URLQueryItem] = [], body: [String: String]? = nil) async throws -> T {
+        try await send(method, path, query: query, json: body)
+    }
+
+    private func send<T: Decodable>(_ method: String, _ path: String, query: [URLQueryItem] = [], json body: (any Encodable)?) async throws -> T {
         let data = try await perform(try request(method, path, query: query, body: body))
         do {
             return try Self.decoder.decode(T.self, from: data)
@@ -201,6 +261,12 @@ struct APIClient: Sendable {
         }
     }
 
+    static let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }()
+
     static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
@@ -212,6 +278,14 @@ struct APIClient: Sendable {
         }
         return decoder
     }()
+}
+
+private struct AddressList: Decodable {
+    let addresses: [Address]
+}
+
+private struct SizeProfile: Codable {
+    let sizes: [String: String]
 }
 
 /// Parses RFC 3339 timestamps with any number of fractional-second digits,
