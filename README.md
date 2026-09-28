@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/IMG_3090.png" width="256" alt="Fitkit logo">
+<img src="docs/assets/IMG_3090.png" width="205" alt="Fitkit logo">
 
 # Fitkit
 
