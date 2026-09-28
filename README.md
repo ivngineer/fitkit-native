@@ -1,4 +1,10 @@
+<div align="center">
+
+<img src="docs/assets/IMG_3090.png" width="256" alt="Fitkit logo">
+
 # Fitkit
+
+</div>
 
 > **Proprietary software — property of Fitkit.** "Fitkit" is the trade name
 > of the project's founder and owner, Ivan Krykun.
