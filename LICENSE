@@ -1,0 +1,135 @@
+# Proprietary Software License — Fitkit
+
+Copyright (c) 2026 Ivan Krykun <vanakrikun0@gmail.com>, doing business as
+Fitkit. All rights reserved.
+
+This repository, its source code, and all accompanying software, documentation,
+and build artifacts (collectively, the "Software") are licensed, not sold, under
+the terms of this license ("License"). The "Licensor" is Ivan Krykun
+<vanakrikun0@gmail.com>, an individual, the sole and exclusive owner of the
+Software, who conducts the Fitkit project under the trade name "Fitkit" pending
+the formation of a legal entity. Wherever this License or the Software refers
+to "Fitkit", it means the Licensor.
+
+## 1. Ownership
+
+The Software is and remains the exclusive property of the Licensor. Nothing in
+this License transfers any ownership, title, or interest in the Software or in
+any intellectual property rights related to it. All rights not expressly granted
+by this License are reserved by the Licensor.
+
+## 2. Grant to Approved Contributors
+
+An "Approved Contributor" is any natural or legal person who, at the time of the
+relevant act, holds an active collaborator or maintainer role on the Licensor's
+GitHub repository for this Software (github.com project designated by the
+Licensor), as recorded by GitHub's collaborator/team membership for that
+repository.
+
+Subject to the restrictions in Section 4, each Approved Contributor may:
+
+1. **Access and modify** the source code of the Software for the purpose of
+   contributing to the project;
+2. **Build** the Software from source, including modified versions;
+3. **Install** the Software, in original or modified form, on devices they own
+   or control;
+4. **Distribute prebuilt copies** of the Software — including copies containing
+   their own modifications — free of charge, provided that:
+   a. each copy is distributed together with this License; and
+   b. no source code, build scripts, or other source material is included in or
+      alongside the distributed copy.
+
+## 3. Grant to End Users
+
+Any person who legitimately receives a prebuilt copy of the Software may use it
+and redistribute it free of charge, provided that:
+
+1. the copy is redistributed unmodified and in its entirety as received;
+2. no fee, charge, or other consideration is requested or received for the
+   copy or for its distribution; and
+3. this License is distributed together with the copy.
+
+## 4. Restrictions
+
+The following applies to Approved Contributors and End Users alike:
+
+1. **No source distribution.** No person may distribute, publish, transmit, or
+   otherwise make available the source code of the Software, in whole or in
+   part, in any form, including but not limited to repositories, archives,
+   patches, diffs, code snippets, or screenshots of source files.
+2. **No disclosure of implementation details.** No person may disclose or
+   publish non-public information about the internal implementation of the
+   Software, including its architecture, algorithms, data structures,
+   protocols, internal APIs, file formats, or code organization, except:
+   a. to the Licensor, or
+   b. to other Approved Contributors through the project's private channels, or
+   c. as required by law or by a binding order of a competent authority, in
+      which case the disclosing party shall, to the extent lawful, notify the
+      Licensor before disclosure.
+3. **No reverse engineering.** No person may decompile, disassemble, or
+   reverse-engineer the Software, except to the extent such restriction is
+   prohibited by applicable mandatory law.
+4. **No commercial distribution.** No person may sell, sublicense for a fee,
+   rent, lease, or commercially distribute the Software or any copy of it.
+5. **No removal of notices.** No person may remove, obscure, or alter any
+   copyright notice, attribution, or proprietary legend contained in the
+   Software.
+
+## 5. Contributions
+
+Any contribution submitted to the project by an Approved Contributor becomes,
+upon acceptance, part of the Software and is subject to this License under the
+same terms. Each Approved Contributor hereby assigns to the Licensor all
+right, title, and interest in such accepted contributions and waives, to the
+extent permitted by law, any moral rights in them. If an assignment is not
+permitted under applicable law, the Approved Contributor grants the Licensor a
+perpetual, irrevocable, worldwide, exclusive, royalty-free, transferable and
+sublicensable license to use, modify, and exploit the contribution without
+limitation.
+
+## 6. Termination
+
+1. An Approved Contributor's status, and all rights granted under Section 2,
+   terminate automatically when the person ceases to hold an active
+   collaborator or maintainer role on the GitHub repository, whether by removal
+   or by the Licensor's deletion or transfer of the repository.
+2. Upon termination, the former Approved Contributor must:
+   a. immediately cease all distribution of the Software;
+   b. within thirty (30) days, delete all copies of the source code and derived
+      material from systems under their control, except one archival copy that
+      may be retained solely for personal records and may not be used,
+      distributed, or disclosed in any way; and
+   c. continue to be bound by Section 4 (Restrictions) with respect to all
+      information and material obtained while an Approved Contributor.
+3. Termination of an individual's contributor status does not terminate the
+   rights of End Users who legitimately received prebuilt copies before
+   termination, provided they comply with Section 3.
+
+## 7. No Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## 8. General
+
+1. This License is the entire agreement between the parties regarding the
+   Software and supersedes any prior agreements on that subject.
+2. If any provision of this License is held unenforceable, the remaining
+   provisions remain in full effect.
+3. Failure by the Licensor to enforce any provision is not a waiver of that
+   provision or of any other.
+4. The Licensor may amend this License at any time by publishing a new version
+   in the repository. Amendments do not retroactively reduce the Section 3
+   rights of copies already distributed under this version.
+5. The Licensor may assign this License and all rights in the Software, in
+   whole or in part, including to a legal entity formed to carry on the Fitkit
+   project. Upon publication of the assignment in the repository, the assignee
+   succeeds to every right and obligation of the Licensor under this License.
+
+---
+
+*For licensing inquiries, contact Ivan Krykun <vanakrikun0@gmail.com>.*
