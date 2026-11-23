@@ -59,14 +59,14 @@ struct PinDetailView: View {
                                 Label(isInCart ? "Remove from Cart" : "Add to Cart",
                                       systemImage: isInCart ? "cart.badge.minus" : "cart.badge.plus")
                             }
-                            .disabled(app.isOffline)
+                            .disabled(app.isUIOffline)
                             if case .loaded = model.state {
                                 Button {
                                     model.start(api: app.api, app: app, force: true)
                                 } label: {
                                     Label("Search Again", systemImage: "arrow.clockwise")
                                 }
-                                .disabled(app.isOffline)
+                                .disabled(app.isUIOffline)
                             }
                             if let url = URL(string: model.pin.pinterestUrl) {
                                 Link(destination: url) {
@@ -77,7 +77,7 @@ struct PinDetailView: View {
                             Button(role: .destructive, action: onRemove) {
                                 Label("Remove from Fitkit", systemImage: "eye.slash")
                             }
-                            .disabled(app.isOffline)
+                            .disabled(app.isUIOffline)
                         } label: {
                             Label("More", systemImage: "ellipsis.circle")
                         }
@@ -148,7 +148,7 @@ struct PinDetailView: View {
                     .accessibilityIdentifier("pin.remove")
                     Button("Search Again") { model.start(api: app.api, app: app, force: true) }
                 }
-                .disabled(app.isOffline)
+                .disabled(app.isUIOffline)
             }
 
         case .offline:
@@ -170,7 +170,7 @@ struct PinDetailView: View {
                 if canRetry {
                     Button("Try Again") { model.start(api: app.api, app: app, force: true) }
                         .buttonStyle(.borderedProminent)
-                        .disabled(app.isOffline)
+                        .disabled(app.isUIOffline)
                 }
             }
 
@@ -226,7 +226,7 @@ struct PinDetailView: View {
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)
-        .disabled(app.isOffline)
+        .disabled(app.isUIOffline)
         .accessibilityIdentifier("pin.buyOutfit")
         .padding(.horizontal, 22)
         .padding(.bottom, 20)

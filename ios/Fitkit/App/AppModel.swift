@@ -16,6 +16,14 @@ final class AppModel {
     /// The server can't be reached, so screens show what's saved on this
     /// device and anything that needs the server is turned off.
     private(set) var isOffline = false
+    /// Keeps the interface looking fully available while the server is
+    /// offline. Purely visual: requests still fail without a connection.
+    var demoMode: Bool {
+        didSet { defaults.set(demoMode, forKey: Self.demoModeKey) }
+    }
+    /// Whether screens should dim server-dependent controls and show the
+    /// offline notice. Demo mode masks the offline state in the UI only.
+    var isUIOffline: Bool { isOffline && !demoMode }
     /// Bumped when the server comes back after being offline, so screens reload.
     private(set) var reconnectCount = 0
     /// Bumped when local data is cleared, so screens drop what they hold.
@@ -34,6 +42,7 @@ final class AppModel {
     private var retryTask: Task<Void, Never>?
 
     static let baseURLKey = "serverBaseURL"
+    static let demoModeKey = "demoMode"
     static let firstRetryDelay: Duration = .seconds(5)
     static let maxRetryDelay: Duration = .seconds(60)
 
@@ -42,6 +51,7 @@ final class AppModel {
         self.defaults = defaults
         self.store = store
         self.baseURL = Self.initialBaseURL(defaults: defaults)
+        self.demoMode = defaults.bool(forKey: Self.demoModeKey)
     }
 
     var api: APIClient {

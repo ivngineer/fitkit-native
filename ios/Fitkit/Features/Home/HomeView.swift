@@ -58,7 +58,7 @@ struct HomeView: View {
             GeometryReader { geometry in
                 ScrollView {
                     VStack(spacing: 16) {
-                        if app.isOffline {
+                        if app.isUIOffline {
                             OfflineBanner()
                                 .transition(.move(edge: .top).combined(with: .opacity))
                         }
@@ -102,14 +102,14 @@ struct HomeView: View {
                                     Label(cart.contains(pin) ? "Remove from Cart" : "Add to Cart",
                                           systemImage: cart.contains(pin) ? "cart.badge.minus" : "cart.badge.plus")
                                 }
-                                .disabled(app.isOffline)
+                                .disabled(app.isUIOffline)
                                 Divider()
                                 Button(role: .destructive) {
                                     remove(pin)
                                 } label: {
                                     Label("Remove from Fitkit", systemImage: "eye.slash")
                                 }
-                                .disabled(app.isOffline)
+                                .disabled(app.isUIOffline)
                             }
                             .task { await model.loadMoreIfNeeded(after: pin, api: app.api, app: app) }
                             .accessibilityIdentifier("pin.\(pin.id)")
@@ -125,7 +125,7 @@ struct HomeView: View {
                     .frame(width: layout.gridWidth)
                     .frame(maxWidth: .infinity)
                     .animation(.default, value: model.visibleImportJob?.id)
-                    .animation(.default, value: app.isOffline)
+                    .animation(.default, value: app.isUIOffline)
                 }
             }
             .overlay { emptyState }
@@ -225,7 +225,7 @@ struct HomeView: View {
             } label: {
                 Label("Import from Pinterest", systemImage: "arrow.triangle.2.circlepath")
             }
-            .disabled(app.isOffline || app.user?.pinterestUsername == nil || model.importJob?.isActive == true)
+            .disabled(app.isUIOffline || app.user?.pinterestUsername == nil || model.importJob?.isActive == true)
         }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
@@ -295,7 +295,7 @@ struct HomeView: View {
                 } actions: {
                     Button("Connect Pinterest") { isConnectPresented = true }
                         .buttonStyle(.borderedProminent)
-                        .disabled(app.isOffline)
+                        .disabled(app.isUIOffline)
                         .accessibilityIdentifier("home.connect")
                 }
             } else if model.importJob?.isActive != true, model.visibleImportJob == nil {
@@ -306,7 +306,7 @@ struct HomeView: View {
                 } actions: {
                     Button("Import from Pinterest") { Task { await model.startImport(api: app.api, app: app) } }
                         .buttonStyle(.borderedProminent)
-                        .disabled(app.isOffline)
+                        .disabled(app.isUIOffline)
                 }
             }
         }

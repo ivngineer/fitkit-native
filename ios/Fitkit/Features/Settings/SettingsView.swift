@@ -13,6 +13,7 @@ struct SettingsView: View {
     @State private var serverURL = ""
 
     var body: some View {
+        @Bindable var app = app
         NavigationStack {
             Form {
                 Section {
@@ -20,20 +21,20 @@ struct SettingsView: View {
                 } header: {
                     Text("Account")
                 } footer: {
-                    if app.isOffline {
+                    if app.isUIOffline {
                         Text("You're offline. Changes to your account need a connection to the Fitkit server.")
                     }
                 }
 
                 Section {
                     NavigationLink { OrdersView() } label: { Text("Orders") }
-                        .disabled(app.isOffline)
+                        .disabled(app.isUIOffline)
                         .accessibilityIdentifier("settings.orders")
                     NavigationLink { AddressesView() } label: { Text("Addresses") }
-                        .disabled(app.isOffline)
+                        .disabled(app.isUIOffline)
                         .accessibilityIdentifier("settings.addresses")
                     NavigationLink { SizesView() } label: { Text("Sizes") }
-                        .disabled(app.isOffline)
+                        .disabled(app.isUIOffline)
                         .accessibilityIdentifier("settings.sizes")
                 } header: {
                     Text("Shopping")
@@ -49,12 +50,12 @@ struct SettingsView: View {
                             Text(app.user?.pinterestUsername.map { "@\($0)" } ?? "Not connected")
                         }
                     }
-                    .disabled(app.isOffline)
+                    .disabled(app.isUIOffline)
                     Button("Import Saves Now") {
                         dismiss()
                         onImport()
                     }
-                    .disabled(app.isOffline || app.user?.pinterestUsername == nil)
+                    .disabled(app.isUIOffline || app.user?.pinterestUsername == nil)
                 } header: {
                     Text("Pinterest")
                 } footer: {
@@ -69,10 +70,12 @@ struct SettingsView: View {
                             Text(app.user?.referralSource.flatMap(ReferralSource.init(rawValue:))?.title ?? "Not set")
                         }
                     }
-                    .disabled(app.isOffline)
+                    .disabled(app.isUIOffline)
                 }
 
                 Section {
+                    Toggle("Demo Mode", isOn: $app.demoMode)
+                        .accessibilityIdentifier("settings.demoMode")
                     LabeledContent("Saved on This Device") {
                         if let localDataSize {
                             Text(localDataSize, format: .byteCount(style: .file))
@@ -87,7 +90,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Offline")
                 } footer: {
-                    Text("Your pins, their pieces and shopping links are kept on this device so you can browse without a connection. Clearing them frees up space and doesn't change anything in your account.")
+                    Text("Your pins, their pieces and shopping links are kept on this device so you can browse without a connection. Clearing them frees up space and doesn't change anything in your account. Demo mode keeps buttons and settings looking active while the server is offline and hides the offline notice; actions that need the server still require a connection.")
                 }
 
                 #if DEBUG
@@ -111,7 +114,7 @@ struct SettingsView: View {
                     Button("Delete Account", role: .destructive) {
                         isConfirmingDelete = true
                     }
-                    .disabled(isDeleting || app.isOffline)
+                    .disabled(isDeleting || app.isUIOffline)
                 } footer: {
                     if let errorMessage {
                         Text(errorMessage).foregroundStyle(.red)

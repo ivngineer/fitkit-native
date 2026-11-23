@@ -28,7 +28,7 @@ struct CartView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .swipeActions {
-                                    if !app.isOffline {
+                                    if !app.isUIOffline {
                                         Button("Remove", systemImage: "trash", role: .destructive) { toggle(pin) }
                                     }
                                 }
@@ -41,7 +41,7 @@ struct CartView: View {
                                     Button(role: .destructive) { toggle(pin) } label: {
                                         Label("Remove from Cart", systemImage: "cart.badge.minus")
                                     }
-                                    .disabled(app.isOffline)
+                                    .disabled(app.isUIOffline)
                                 }
                             }
                         } footer: {
