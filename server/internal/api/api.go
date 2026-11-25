@@ -20,6 +20,7 @@ import (
 	"fitkit/server/internal/pinterest"
 	"fitkit/server/internal/shop"
 	"fitkit/server/internal/store"
+	wsservice "fitkit/server/internal/workspace/service"
 )
 
 type Server struct {
@@ -30,6 +31,8 @@ type Server struct {
 	MediaDir   string
 	SessionTTL time.Duration
 	Log        *slog.Logger
+	// Workspace is the employee workspace; orders placed in the app land there.
+	Workspace *wsservice.Service
 
 	limiter *rateLimiter
 }
@@ -66,6 +69,7 @@ func (s *Server) Handler() http.Handler {
 		s.Shop = &shop.Service{Cache: s.Store}
 	}
 	s.checkoutRoutes(mux)
+	s.orderRoutes(mux)
 
 	mux.Handle("GET /media/", http.StripPrefix("/media/", noDirListing(http.FileServer(http.Dir(s.MediaDir)))))
 	return s.logRequests(mux)

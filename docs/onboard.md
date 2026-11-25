@@ -4,7 +4,8 @@ Fitkit turns Pinterest saves into a shopping list. Save an outfit on Pinterest, 
 
 ```
 ios/      SwiftUI iPhone and iPad app (iOS 18+)
-server/   Go API server: accounts, Pinterest import, analysis pipeline, provider keys
+server/   Go API server: accounts, Pinterest import, analysis pipeline, provider keys,
+          and the employee workspace API for the desktop app buyers use
 ```
 
 The app only talks to the Fitkit server. Scraping, third-party API keys and accounts all stay on the server.
@@ -134,6 +135,23 @@ Fitkit takes no payment and isn't the seller; see [mvp-plan.md](mvp-plan.md). Th
 - **Orders**: the user marks each store ordered, shipped, delivered or skipped and can add an order and tracking number; known carriers get a tracking link.
 - **Affiliate tags** come from `AMAZON_ASSOCIATE_TAG_<SITE>`, `ALIEXPRESS_AFFILIATE_KEY` and `SKIMLINKS_PUBLISHER_ID`; all optional. In demo mode, listings from `*.fitkit.example` act as a Shopify store without any network calls.
 
+### Buying through Fitkit (`internal/api/orders.go`)
+“Купити” in the app sends `POST /v1/orders`: the pin, the user's name or nickname, and the pieces (`itemId` + `listingUrl`, optional size, quantity and comment). As with looks, each piece must exist in the pin's stored analysis, so names, stores, links, photos (local crops, else the listing thumbnail) and prices come from the analysis, never the app. A missing size falls back to the user's saved size for that category. Prices in hryvnias are kept in kopiyky; other currencies are kept as the listing's price text (`listingPrice`) for the buyer, and the order total is set only when every price is in hryvnias. An optional `idempotencyKey` makes a retried tap return the same order.
+
+The order is stored as a new request in the employee workspace (client `user:<id>`, the pin image as the order photo) and the response carries its number (`#1000`, `#1001`, …) and the status the client sees. `GET /v1/orders` lists the user's orders with that status only — buyers, notes and history stay internal. Payment and delivery aren't part of this yet.
+
+### Employee workspace (`internal/workspace`)
+The desktop app buyers use (React, in the `UX-dizain` repository) talks to the same server under `/api`, with its own employee accounts and cookie sessions, and the server can serve its build (`FITKIT_WEB_DIR`). Tables live in the same SQLite file.
+
+- **Orders**: queue of new requests (`take`, `take-next`; atomic), item checks, store price, rules (a rise up to 5% is covered, above that the client confirms, sold out is refunded; unanswered confirmations are refunded after 24 h by a background job), purchase guard, cancel with refund, problem flag, team notes, history.
+- **Parcels**: one per store after purchase, tracking numbers (manual or from the aggregator webhook), warehouse receipt, the Nova Poshta shipment once every parcel is at the warehouse; stalled parcels get flagged.
+- **Support tickets** answered as Fitkit Support.
+- **Live updates** over Server-Sent Events (`/api/events`).
+- **Webhooks** (`/webhooks/client-app/*`, `/webhooks/tracking`) are HMAC-signed (`X-Fitkit-Signature: sha256=<hex>`).
+- Nova Poshta, the tracking aggregator, refunds and client notices are interfaces with logging fakes for now (`internal/workspace/integrations`).
+
+The first employee comes from `FITKIT_BOOTSTRAP_ADMIN_EMAIL` / `FITKIT_BOOTSTRAP_ADMIN_PASSWORD` while there are none; more with `go run ./cmd/fitkitd create-employee -name … -email … -role buyer|lead|warehouse|support -password …`. `ALLOW_SEED=true go run ./cmd/fitkitd seed-workspace` wipes the workspace tables (not app accounts or pins) and loads demo data (`anna@fitkit.space` / `fitkit-demo`).
+
 ## API
 
 | Method | Path | |
@@ -157,9 +175,13 @@ Fitkit takes no payment and isn't the seller; see [mvp-plan.md](mvp-plan.md). Th
 | POST | `/v1/looks` | `{pinId, addressId?, items: [{itemId, listingUrl, variantId?, size?, quantity}]}` → look with its checkout plan |
 | GET | `/v1/looks`, `/v1/looks/{id}` | orders, newest first |
 | PUT | `/v1/looks/{id}/stores/{merchant}` | `{status, orderRef?, trackingNo?, carrier?}` |
+| POST | `/v1/orders` | `{pinId, name, idempotencyKey?, items: [{itemId, listingUrl, size?, quantity?, comment?}]}` → order with its number |
+| GET | `/v1/orders`, `/v1/orders/{id}` | the user's orders with the status they see |
 | GET | `/media/...` | pin images and demo crops |
 
 Authenticated routes take `Authorization: Bearer <token>`. Errors come back as `{"error": {"code", "message"}}`.
+
+The employee workspace API (`/api/...`: sign-in, orders, parcels, tickets, events; `/webhooks/...`) uses employee accounts, an HttpOnly cookie or Bearer token, and `{"error": "<message>"}` errors; amounts are in kopiyky. It is documented with the desktop app in the `UX-dizain` repository (`fitkit-employee-app/api/README.md`).
 
 ## TODO
 
