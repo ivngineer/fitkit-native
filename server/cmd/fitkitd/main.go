@@ -1,4 +1,9 @@
-// Command fitkitd runs the Fitkit API server.
+// Command fitkitd runs the Fitkit API server: the app API (/v1), and the employee
+// workspace API (/api, /webhooks) with its desktop front-end.
+//
+//	fitkitd                     serve
+//	fitkitd create-employee …   add an employee sign-in
+//	fitkitd seed-workspace      load workspace demo data (ALLOW_SEED=true)
 package main
 
 import (
@@ -19,6 +24,8 @@ import (
 	"fitkit/server/internal/pinterest"
 	"fitkit/server/internal/shop"
 	"fitkit/server/internal/store"
+	"fitkit/server/internal/workspace/jobs"
+	wsstore "fitkit/server/internal/workspace/store"
 )
 
 func main() {
@@ -43,6 +50,19 @@ func run(log *slog.Logger) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	wsStore := wsstore.New(st.DB())
+	if err := wsStore.Migrate(ctx); err != nil {
+		return err
+	}
+	if ran, err := workspaceCommand(ctx, os.Args[1:], wsStore, log); ran || err != nil {
+		return err
+	}
+	ws, err := newWorkspace(ctx, cfg, wsStore, log)
+	if err != nil {
+		return err
+	}
+	go jobs.Run(ctx, ws.svc, cfg.WorkspaceJobsInterval, log)
 
 	if err := st.ResetStaleAnalyses(ctx); err != nil {
 		return err
@@ -70,17 +90,18 @@ func run(log *slog.Logger) error {
 		log.Warn("visual search not configured; items get store search links without prices", "missing", analysis.Missing)
 	}
 
+	app := (&api.Server{
+		Store: st, Importer: imp, Analysis: analysis, MediaDir: mediaDir, SessionTTL: cfg.SessionTTL, Log: log, Workspace: ws.svc,
+		Shop: &shop.Service{
+			Cache:     st,
+			Affiliate: shop.Affiliate{AmazonTags: cfg.AmazonTags, AliExpressKey: cfg.AliExpressKey, SkimlinksID: cfg.SkimlinksID},
+			ShopPay:   cfg.ShopPay,
+			Demo:      cfg.DemoAnalysis,
+		},
+	}).Handler()
 	srv := &http.Server{
-		Addr: cfg.Addr,
-		Handler: (&api.Server{
-			Store: st, Importer: imp, Analysis: analysis, MediaDir: mediaDir, SessionTTL: cfg.SessionTTL, Log: log,
-			Shop: &shop.Service{
-				Cache:     st,
-				Affiliate: shop.Affiliate{AmazonTags: cfg.AmazonTags, AliExpressKey: cfg.AliExpressKey, SkimlinksID: cfg.SkimlinksID},
-				ShopPay:   cfg.ShopPay,
-				Demo:      cfg.DemoAnalysis,
-			},
-		}).Handler(),
+		Addr:              cfg.Addr,
+		Handler:           routes(app, ws.handler),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	errc := make(chan error, 1)

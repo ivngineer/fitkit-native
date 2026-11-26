@@ -49,6 +49,21 @@ type Config struct {
 	// DemoAnalysis swaps the paid providers for deterministic placeholder
 	// output so the app can be exercised without API keys.
 	DemoAnalysis bool
+
+	// Employee workspace (desktop app for buyers, /api and /webhooks).
+	// WebDir is the built desktop front-end to serve; empty serves the API only.
+	WebDir string
+	// AllowOrigin lets a desktop front-end on another origin call /api with cookies.
+	AllowOrigin  string
+	SecureCookie bool
+	// Shared secrets for HMAC-signed webhooks from the client app and the tracking aggregator.
+	ClientAppWebhookSecret string
+	TrackerWebhookSecret   string
+	WorkspaceJobsInterval  time.Duration
+	// First employee sign-in, created only while there are no employees.
+	BootstrapAdminEmail    string
+	BootstrapAdminPassword string
+	BootstrapAdminName     string
 }
 
 func Load() Config {
@@ -77,6 +92,16 @@ func Load() Config {
 		ShopPay:       envBool("SHOPIFY_SHOP_PAY", true),
 
 		DemoAnalysis: envBool("FITKIT_DEMO_ANALYSIS", false),
+
+		WebDir:                 env("FITKIT_WEB_DIR", ""),
+		AllowOrigin:            env("FITKIT_ALLOW_ORIGIN", ""),
+		SecureCookie:           envBool("FITKIT_SECURE_COOKIE", false),
+		ClientAppWebhookSecret: env("CLIENT_APP_WEBHOOK_SECRET", ""),
+		TrackerWebhookSecret:   env("TRACKER_WEBHOOK_SECRET", ""),
+		WorkspaceJobsInterval:  envDuration("FITKIT_WORKSPACE_JOBS_INTERVAL", time.Minute),
+		BootstrapAdminEmail:    env("FITKIT_BOOTSTRAP_ADMIN_EMAIL", ""),
+		BootstrapAdminPassword: env("FITKIT_BOOTSTRAP_ADMIN_PASSWORD", ""),
+		BootstrapAdminName:     env("FITKIT_BOOTSTRAP_ADMIN_NAME", "Адміністратор"),
 	}
 }
 
@@ -117,6 +142,13 @@ func envList(key, fallback string) []string {
 
 func envInt(key string, fallback int) int {
 	if v, err := strconv.Atoi(os.Getenv(key)); err == nil {
+		return v
+	}
+	return fallback
+}
+
+func envDuration(key string, fallback time.Duration) time.Duration {
+	if v, err := time.ParseDuration(os.Getenv(key)); err == nil && v > 0 {
 		return v
 	}
 	return fallback

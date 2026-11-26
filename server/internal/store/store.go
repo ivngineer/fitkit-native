@@ -44,6 +44,9 @@ func Open(path string) (*Store, error) {
 
 func (s *Store) Close() error { return s.db.Close() }
 
+// DB is the shared connection; the employee workspace keeps its tables in the same file.
+func (s *Store) DB() *sql.DB { return s.db }
+
 const schema = `
 CREATE TABLE IF NOT EXISTS users (
 	id                 TEXT PRIMARY KEY,
