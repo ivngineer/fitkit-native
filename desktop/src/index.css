@@ -1,0 +1,95 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Inter (UI) — self-hosted, same files as the mockups */
+@font-face { font-family: "Inter Variable"; font-weight: 100 900; font-display: swap; src: url(/assets/inter-latin-wght-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+2000-206F, U+20AC, U+2190-21FF, U+2212; }
+@font-face { font-family: "Inter Variable"; font-weight: 100 900; font-display: swap; src: url(/assets/inter-cyrillic-wght-normal.woff2) format("woff2"); unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: "Inter Variable"; font-weight: 100 900; font-display: swap; src: url(/assets/inter-latin-ext-wght-normal.woff2) format("woff2"); unicode-range: U+0100-02BA, U+20A0-20AB, U+20AD-20C0; }
+
+/* shadcn/ui theme — neutral greys. Light in :root, dark in .dark (default). */
+:root {
+  --radius: 1rem;
+  --background: oklch(0.96 0 0);
+  --foreground: oklch(0.17 0 0);
+  --card: oklch(0.995 0 0);
+  --card-foreground: oklch(0.17 0 0);
+  --popover: oklch(0.995 0 0);
+  --popover-foreground: oklch(0.17 0 0);
+  --primary: oklch(0.2 0 0);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.93 0 0);
+  --secondary-foreground: oklch(0.17 0 0);
+  --muted: oklch(0.93 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --accent: oklch(0.895 0 0);
+  --accent-foreground: oklch(0.17 0 0);
+  --destructive: oklch(0.58 0.2 25);
+  --warning: oklch(0.72 0.16 70);
+  --success: oklch(0.62 0.15 150);
+  --border: oklch(0 0 0 / 8%);
+  --input: oklch(0 0 0 / 12%);
+  --ring: oklch(0.55 0 0);
+  color-scheme: light;
+}
+.dark {
+  --background: oklch(0.115 0 0);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.185 0 0);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.93 0 0);
+  --primary-foreground: oklch(0.17 0 0);
+  --secondary: oklch(0.235 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.235 0 0);
+  --muted-foreground: oklch(0.68 0 0);
+  --accent: oklch(0.28 0 0);
+  --accent-foreground: oklch(0.97 0 0);
+  --destructive: oklch(0.68 0.19 24);
+  --warning: oklch(0.8 0.15 80);
+  --success: oklch(0.75 0.15 150);
+  --border: oklch(1 0 0 / 7%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.6 0 0);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-serif: "Newsreader Variable", Georgia, serif;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: calc(var(--radius) - 2px);
+  --radius-xl: var(--radius);
+  --radius-2xl: calc(var(--radius) + 4px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body { @apply bg-background text-foreground antialiased; font-feature-settings: "cv11", "ss01"; }
+  .tabular { font-variant-numeric: tabular-nums; }
+}
