@@ -7,7 +7,7 @@ React 19 + TypeScript + Vite + React Router, UI on **shadcn/ui** (Radix + Tailwi
 ```bash
 npm install
 npm run build                     # dist/, served by the Fitkit server
-cd ../server && FITKIT_WEB_DIR=../desktop/dist FITKIT_BOOTSTRAP_ADMIN_EMAIL=you@fitkit.space FITKIT_BOOTSTRAP_ADMIN_PASSWORD=change-me-please ./run.sh
+cd ../server && FITKIT_WEB_DIR=../agent-workspace/dist FITKIT_BOOTSTRAP_ADMIN_EMAIL=you@fitkit.space FITKIT_BOOTSTRAP_ADMIN_PASSWORD=change-me-please ./run.sh
 ```
 
 Open http://localhost:8080. For development keep the server running and use `npm run dev` here (http://localhost:5173, `/api` and `/media` proxied to :8080). Demo data: `ALLOW_SEED=true go run ./cmd/fitkitd seed-workspace` in `../server` (`anna@fitkit.space` / `fitkit-demo`).

@@ -3,10 +3,10 @@
 Fitkit turns Pinterest saves into a shopping list. Save an outfit on Pinterest, open Fitkit, tap the pin, and get each piece (jacket, boots, bag) with store listings and prices.
 
 ```
-ios/      SwiftUI iPhone and iPad app (iOS 18+)
-server/   Go API server: accounts, Pinterest import, analysis pipeline, provider keys,
-          and the employee workspace API for the desktop app buyers use
-desktop/  React desktop app for Fitkit's buyers (served by the server or run with Vite)
+ios/              SwiftUI iPhone and iPad app (iOS 18+)
+server/           Go API server: accounts, Pinterest import, analysis pipeline, provider keys,
+                  and the employee workspace API for the desktop app buyers use
+agent-workspace/  React desktop app for Fitkit's buyers (served by the server or run with Vite)
 ```
 
 The app only talks to the Fitkit server. Scraping, third-party API keys and accounts all stay on the server.
@@ -37,12 +37,12 @@ What works depends on which keys are set:
 Requires Node 20+. Build it once and let the server serve it:
 
 ```sh
-cd desktop && npm install && npm run build
+cd agent-workspace && npm install && npm run build
 cd ../server
-FITKIT_WEB_DIR=../desktop/dist FITKIT_BOOTSTRAP_ADMIN_EMAIL=you@fitkit.space FITKIT_BOOTSTRAP_ADMIN_PASSWORD=change-me-please ./run.sh
+FITKIT_WEB_DIR=../agent-workspace/dist FITKIT_BOOTSTRAP_ADMIN_EMAIL=you@fitkit.space FITKIT_BOOTSTRAP_ADMIN_PASSWORD=change-me-please ./run.sh
 ```
 
-Open http://localhost:8080 and sign in with the bootstrap account. `ALLOW_SEED=true go run ./cmd/fitkitd seed-workspace` loads demo requests (`anna@fitkit.space` / `fitkit-demo`); it wipes workspace data. While working on the front-end, run `npm run dev` in `desktop/` instead (http://localhost:5173, proxying `/api` and `/media` to :8080).
+Open http://localhost:8080 and sign in with the bootstrap account. `ALLOW_SEED=true go run ./cmd/fitkitd seed-workspace` loads demo requests (`anna@fitkit.space` / `fitkit-demo`); it wipes workspace data. While working on the front-end, run `npm run dev` in `agent-workspace/` instead (http://localhost:5173, proxying `/api` and `/media` to :8080).
 
 ### 3. iOS app
 
@@ -154,7 +154,7 @@ Fitkit takes no payment and isn't the seller; see [mvp-plan.md](mvp-plan.md). Th
 The order is stored as a new request in the employee workspace (client `user:<id>`, the pin image as the order photo) and the response carries its number (`#1000`, `#1001`, …) and the status the client sees. `GET /v1/orders` lists the user's orders with that status only — buyers, notes and history stay internal. Payment and delivery aren't part of this yet.
 
 ### Employee workspace (`internal/workspace`)
-The desktop app buyers use (React, `desktop/`) talks to the same server under `/api`, with its own employee accounts and cookie sessions, and the server can serve its build (`FITKIT_WEB_DIR`). Tables live in the same SQLite file.
+The desktop app buyers use (React, `agent-workspace/`) talks to the same server under `/api`, with its own employee accounts and cookie sessions, and the server can serve its build (`FITKIT_WEB_DIR`). Tables live in the same SQLite file.
 
 - **Orders**: queue of new requests (`take`, `take-next`; atomic), item checks, store price, rules (a rise up to 5% is covered, above that the client confirms, sold out is refunded; unanswered confirmations are refunded after 24 h by a background job), purchase guard, cancel with refund, problem flag, team notes, history.
 - **Parcels**: one per store after purchase, tracking numbers (manual or from the aggregator webhook), warehouse receipt, the Nova Poshta shipment once every parcel is at the warehouse; stalled parcels get flagged.
