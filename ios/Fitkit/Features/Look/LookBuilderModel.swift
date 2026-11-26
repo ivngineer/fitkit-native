@@ -1,9 +1,10 @@
 import Foundation
 import Observation
 
-/// Picks the pieces, sizes and address for "Get this look", then asks the
-/// server for a checkout plan. The server checks everything again; this only
-/// keeps the user from sending something obviously incomplete.
+/// Picks the pieces and sizes for "Get this look", then either places a Fitkit
+/// order ("Buy": Fitkit's buyers purchase the pieces) or asks the server for a
+/// checkout plan to pay each store directly. The server checks everything
+/// again; this only keeps the user from sending something obviously incomplete.
 @Observable
 final class LookBuilderModel {
     struct Piece: Identifiable {
@@ -32,8 +33,17 @@ final class LookBuilderModel {
     private(set) var rememberedSizes: [String: String] = [:]
     private(set) var isSubmitting = false
     var errorMessage: String?
+    /// Name or nickname sent with Fitkit orders; remembered on this device.
+    var buyerName: String = UserDefaults.standard.string(forKey: LookBuilderModel.buyerNameKey) ?? ""
+    /// One key per order attempt, so a retried tap returns the same order
+    /// instead of placing a second one.
+    private var orderKey = UUID().uuidString
 
     static let maxOptionURLs = 30
+    static let buyerNameKey = "orderBuyerName"
+    /// The server's limits for an order's name and a piece's size.
+    static let maxBuyerNameLength = 60
+    static let maxSizeLength = 16
 
     init(pin: Pin, result: AnalysisResult) {
         self.pin = pin
@@ -63,6 +73,13 @@ final class LookBuilderModel {
 
     var canSubmit: Bool {
         !isSubmitting && includedCount > 0 && !pieces.contains { $0.included && needsVariant($0) }
+    }
+
+    var trimmedBuyerName: String { buyerName.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// "Buy" also needs a name the buyers can address the order to.
+    var canBuy: Bool {
+        canSubmit && !trimmedBuyerName.isEmpty && trimmedBuyerName.count <= Self.maxBuyerNameLength
     }
 
     // MARK: Loading
@@ -153,6 +170,44 @@ final class LookBuilderModel {
             if !app.handleUnauthorized(error) { errorMessage = error.localizedDescription }
             return nil
         }
+    }
+
+    // MARK: Buying through Fitkit
+
+    /// Places the order and returns it with its number.
+    func buy(api: APIClient, app: AppModel) async -> FitkitOrder? {
+        guard canBuy else { return nil }
+        isSubmitting = true
+        errorMessage = nil
+        defer { isSubmitting = false }
+        let name = trimmedBuyerName
+        UserDefaults.standard.set(name, forKey: Self.buyerNameKey)
+        let items = pieces.filter(\.included).map { piece in
+            OrderRequest.Item(itemId: piece.id, listingUrl: piece.listingURL, size: orderSize(for: piece),
+                              quantity: 1, comment: nil)
+        }
+        do {
+            let order = try await api.createOrder(
+                OrderRequest(pinId: pin.id, name: name, idempotencyKey: orderKey, items: items))
+            orderKey = UUID().uuidString
+            await rememberSizes(api: api)
+            return order
+        } catch is CancellationError {
+            return nil
+        } catch {
+            if !app.handleUnauthorized(error) { errorMessage = error.localizedDescription }
+            return nil
+        }
+    }
+
+    /// The size to send: the picked store variant's size, else the free-text one.
+    private func orderSize(for piece: Piece) -> String? {
+        var size = piece.size.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let product = product(for: piece), let id = piece.variantID,
+           let variant = product.variants.first(where: { $0.id == id }) {
+            size = Self.size(of: variant, in: product) ?? variant.title
+        }
+        return size.isEmpty ? nil : String(size.prefix(Self.maxSizeLength))
     }
 
     /// Saves the sizes used in this checkout for next time. Best effort.

@@ -185,6 +185,24 @@ struct APIClient: Sendable {
         try await send("PUT", "/v1/looks/\(lookID)/stores/\(merchant)", json: update)
     }
 
+    // MARK: Orders (buying through Fitkit)
+
+    func createOrder(_ request: OrderRequest) async throws -> FitkitOrder {
+        try await send("POST", "/v1/orders", json: request)
+    }
+
+    /// The user's Fitkit orders, newest first. A server without ordering
+    /// (an older version) answers 404, which reads as no orders.
+    func orders() async throws -> [FitkitOrder] {
+        struct Response: Decodable { let orders: [FitkitOrder] }
+        do {
+            let response: Response = try await send("GET", "/v1/orders")
+            return response.orders
+        } catch APIError.server(404, _, _) {
+            return []
+        }
+    }
+
     /// Resolves server-relative media paths ("/media/…") and absolute URLs.
     func resolve(_ path: String?) -> URL? {
         guard let path, !path.isEmpty else { return nil }

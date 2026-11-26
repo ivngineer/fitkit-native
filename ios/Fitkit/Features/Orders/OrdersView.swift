@@ -3,6 +3,8 @@ import SwiftUI
 struct OrdersView: View {
     @Environment(AppModel.self) private var app
     @State private var looks: [Look] = []
+    /// Orders placed with "Buy", fulfilled by Fitkit's buyers.
+    @State private var orders: [FitkitOrder] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
 
@@ -10,14 +12,27 @@ struct OrdersView: View {
         Group {
             if isLoading {
                 ProgressView()
-            } else if looks.isEmpty {
+            } else if looks.isEmpty && orders.isEmpty {
                 ContentUnavailableView {
                     Label("No Orders Yet", systemImage: "bag")
                 } description: {
-                    Text("Tap Get This Look on a pin to check out its pieces.")
+                    Text("Tap Get This Look on a pin to buy its pieces.")
                 }
             } else {
                 List {
+                    if !orders.isEmpty {
+                        Section {
+                            ForEach(orders) { order in
+                                NavigationLink {
+                                    FitkitOrderDetailView(order: order)
+                                } label: {
+                                    FitkitOrderRow(order: order)
+                                }
+                            }
+                        } header: {
+                            if !looks.isEmpty { Text("Bought by Fitkit") }
+                        }
+                    }
                     Section {
                         ForEach(looks) { look in
                             NavigationLink {
@@ -26,6 +41,8 @@ struct OrdersView: View {
                                 LookRow(look: look, imageURL: app.api.resolve(look.pinImageUrl))
                             }
                         }
+                    } header: {
+                        if !orders.isEmpty && !looks.isEmpty { Text("Store Checkouts") }
                     } footer: {
                         if let errorMessage {
                             Text(errorMessage).foregroundStyle(.red)
@@ -44,6 +61,8 @@ struct OrdersView: View {
     private func load() async {
         do {
             looks = try await app.api.looks()
+            orders = try await app.api.orders()
+            errorMessage = nil
         } catch {
             if !app.handleUnauthorized(error) { errorMessage = error.localizedDescription }
         }

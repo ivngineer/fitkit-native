@@ -126,6 +126,8 @@ In the app it's a destructive quick action on every grid pin (long press), and t
 
 In the app the cart lives between the sync and account buttons in the header, badged with its count, and opens as a half-height sheet that drags up to full screen. Tapping a row there opens the same breakdown sheet the grid opens, and removing a pin from Fitkit there also takes it out of the cart. "Shop This Look" carries a full-width Get This Look button at the bottom that starts checkout.
 
+**Get This Look** opens a screen for picking pieces and sizes. Its main button, **Buy**, places a Fitkit order (`POST /v1/orders`, below) with the name or nickname entered there (remembered on the device) and shows the order number; Fitkit's buyers then purchase the pieces in the desktop workspace. **Check Out at Each Store Instead** keeps the earlier flow: a checkout plan with a link per store, delivered to one of the user's addresses. **Orders** lists Fitkit orders (number, status the client sees, pieces) above store checkouts.
+
 ### Checkout (`internal/shop`)
 Fitkit takes no payment and isn't the seller; see [mvp-plan.md](mvp-plan.md). The server turns the pieces a user picks into one checkout link per store, and the user pays each store directly.
 

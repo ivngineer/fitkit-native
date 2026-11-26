@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Screen for picking pieces, sizes and an address before Fitkit asks the
-/// server to build a checkout plan across each store. Pushed onto the pin's
-/// navigation stack, so it closes with the back button or a swipe.
+/// Screen for picking pieces and sizes, then buying them through Fitkit
+/// ("Buy" places an order Fitkit's buyers fulfil) or, as before, building a
+/// checkout plan to pay each store directly. Pushed onto the pin's navigation
+/// stack, so it closes with the back button or a swipe.
 struct LookBuilderView: View {
     @Environment(AppModel.self) private var app
     @State private var model: LookBuilderModel
@@ -36,6 +37,8 @@ struct LookBuilderView: View {
                 }
             case .checkout(let look):
                 CheckoutPlanView(look: look)
+            case .ordered(let order):
+                OrderConfirmationView(order: order)
             }
         }
     }
@@ -73,6 +76,19 @@ struct LookBuilderView: View {
                 .listRowBackground(Color.screenGroupedRow)
             }
 
+            Section {
+                TextField("Name or nickname", text: $model.buyerName)
+                    .textContentType(.nickname)
+                    .autocorrectionDisabled()
+                    .submitLabel(.done)
+                    .accessibilityIdentifier("look.buyerName")
+            } header: {
+                Text("Your name")
+            } footer: {
+                Text("Fitkit's team buys these pieces for you. Follow the order under Orders.")
+            }
+            .listRowBackground(Color.screenGroupedRow)
+
             if let errorMessage = model.errorMessage {
                 Section {
                     Text(errorMessage).foregroundStyle(.red)
@@ -83,23 +99,21 @@ struct LookBuilderView: View {
         .scrollContentBackground(.hidden)
         // Gaps between pieces match the list's side margins.
         .listSectionSpacing(16)
-        .contentMargins(.bottom, model.addresses.isEmpty ? 96 : 128, for: .scrollContent)
+        .contentMargins(.bottom, 128, for: .scrollContent)
         .overlay(alignment: .bottom) { bottomBar }
     }
 
-    /// Same pill and fade as "Get This Look" on the pin screen.
+    /// Same pill and fade as "Get This Look" on the pin screen. "Buy" leads;
+    /// paying each store directly stays one tap away.
     private var bottomBar: some View {
         VStack(spacing: 12) {
-            if model.addresses.isEmpty {
-                addAddressButton
-            } else {
-                Button("Change Address") { sheet = .addAddress }
-                    .font(.footnote)
-                    .tint(.red)
-                    .buttonStyle(.borderless)
-                    .accessibilityIdentifier("look.addAddress")
-                reviewButton
-            }
+            Button("Check Out at Each Store Instead", action: checkOutAtStores)
+                .font(.footnote)
+                .tint(.secondary)
+                .buttonStyle(.borderless)
+                .disabled(model.isSubmitting)
+                .accessibilityIdentifier("look.review")
+            buyButton
         }
         .padding(.horizontal, 22)
         .padding(.bottom, 20)
@@ -112,35 +126,39 @@ struct LookBuilderView: View {
         .ignoresSafeArea(edges: .bottom)
     }
 
-    /// Stands in for the checkout button until the user has an address.
-    private var addAddressButton: some View {
-        Button {
-            sheet = .addAddress
-        } label: {
-            pill(Text("Add Address").foregroundStyle(.black))
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("look.addAddress")
-    }
-
-    private var reviewButton: some View {
+    private var buyButton: some View {
         Button {
             // Not `.disabled`: that dims the white pill; grey text says it instead.
-            guard model.canSubmit else { return }
+            guard model.canBuy else { return }
             Task {
-                if let look = await model.submit(api: app.api, app: app) {
-                    sheet = .checkout(look)
+                if let order = await model.buy(api: app.api, app: app) {
+                    sheet = .ordered(order)
                 }
             }
         } label: {
             if model.isSubmitting {
                 pill(ProgressView().tint(.black))
             } else {
-                pill(Text("Review Checkout").foregroundStyle(model.canSubmit ? .black : .gray))
+                pill(Text("Buy").foregroundStyle(model.canBuy ? .black : .gray))
             }
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("look.review")
+        .accessibilityIdentifier("look.buy")
+    }
+
+    /// The earlier checkout: links to each store's own checkout, delivered to
+    /// one of the user's addresses (added here first if there is none).
+    private func checkOutAtStores() {
+        guard !model.addresses.isEmpty else {
+            sheet = .addAddress
+            return
+        }
+        guard model.canSubmit else { return }
+        Task {
+            if let look = await model.submit(api: app.api, app: app) {
+                sheet = .checkout(look)
+            }
+        }
     }
 
     private func pill(_ content: some View) -> some View {
@@ -155,11 +173,13 @@ struct LookBuilderView: View {
 private enum BuilderSheet: Identifiable {
     case addAddress
     case checkout(Look)
+    case ordered(FitkitOrder)
 
     var id: String {
         switch self {
         case .addAddress: "address"
         case .checkout(let look): "checkout-" + look.id
+        case .ordered(let order): "order-" + order.id
         }
     }
 }
