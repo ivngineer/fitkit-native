@@ -26,6 +26,7 @@ import (
 type workspace struct {
 	svc     *service.Service
 	handler http.Handler
+	admin   http.Handler
 }
 
 func newWorkspace(ctx context.Context, cfg config.Config, st *wsstore.Store, log *slog.Logger) (*workspace, error) {
@@ -46,21 +47,34 @@ func newWorkspace(ctx context.Context, cfg config.Config, st *wsstore.Store, log
 		ClientAppSecret: cfg.ClientAppWebhookSecret, TrackerSecret: cfg.TrackerWebhookSecret,
 		AllowOrigin: cfg.AllowOrigin, SecureCookie: cfg.SecureCookie, WebDir: cfg.WebDir,
 	})
-	return &workspace{svc: svc, handler: h}, nil
+	for login, password := range cfg.Admins {
+		if len(password) < 10 {
+			log.Warn("admin password is shorter than 10 characters", "login", login)
+		}
+	}
+	if len(cfg.Admins) == 0 {
+		log.Warn("FITKIT_ADMINS is empty: nobody can sign in to the admin panel")
+	}
+	admin := httpapi.NewAdmin(httpapi.AdminConfig{
+		Service: svc, Log: log, Admins: cfg.Admins, SecureCookie: cfg.SecureCookie, WebDir: cfg.AdminWebDir,
+	})
+	return &workspace{svc: svc, handler: h, admin: admin}, nil
 }
 
-// routes sends the mobile API and media to the app server and everything else
-// (/api, /webhooks and the desktop front-end) to the workspace.
-func routes(app, ws http.Handler) http.Handler {
+// routes sends the mobile API and media to the app server, /admin to the admin
+// panel, and everything else (/api, /webhooks and the desktop front-end) to the workspace.
+func routes(app, ws, admin http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/v1/", app)
 	mux.Handle("/media/", app)
 	mux.Handle("/healthz", app)
+	mux.Handle("/admin/", admin)
+	mux.Handle("/admin", admin)
 	mux.Handle("/", ws)
 	return mux
 }
 
-// bootstrapAdmin creates the first employee (a shift lead) while there are none,
+// bootstrapAdmin creates the first employee (a buyer who is a team lead) while there are none,
 // so a fresh deployment needs no shell access.
 func bootstrapAdmin(ctx context.Context, cfg config.Config, st *wsstore.Store, log *slog.Logger) error {
 	if cfg.BootstrapAdminEmail == "" || cfg.BootstrapAdminPassword == "" {
@@ -77,7 +91,10 @@ func bootstrapAdmin(ctx context.Context, cfg config.Config, st *wsstore.Store, l
 	if err != nil {
 		return err
 	}
-	e, err := st.Q().CreateEmployee(ctx, cfg.BootstrapAdminName, cfg.BootstrapAdminEmail, domain.RoleLead, string(hash))
+	e, err := st.Q().CreateEmployee(ctx, cfg.BootstrapAdminName, cfg.BootstrapAdminEmail, domain.RoleBuyer, string(hash))
+	if err == nil {
+		err = st.Q().SetTeamLead(ctx, e.ID, true)
+	}
 	if err == nil {
 		log.Info("first employee created from FITKIT_BOOTSTRAP_ADMIN_*", "email", e.Email)
 	}
@@ -86,7 +103,7 @@ func bootstrapAdmin(ctx context.Context, cfg config.Config, st *wsstore.Store, l
 
 // workspaceCommand runs a one-off workspace command and reports whether args named one.
 //
-//	fitkitd create-employee -name … -email … -role buyer|lead|warehouse|support -password …
+//	fitkitd create-employee -name … -email … -role buyer|warehouse|support [-team-lead] -password …
 //	fitkitd seed-workspace          wipes workspace data and loads the demo (needs ALLOW_SEED=true)
 func workspaceCommand(ctx context.Context, args []string, st *wsstore.Store, log *slog.Logger) (bool, error) {
 	if len(args) == 0 {
@@ -97,15 +114,14 @@ func workspaceCommand(ctx context.Context, args []string, st *wsstore.Store, log
 		fs := flag.NewFlagSet(args[0], flag.ExitOnError)
 		name := fs.String("name", "", "full name")
 		email := fs.String("email", "", "login e-mail")
-		role := fs.String("role", "buyer", "buyer | lead | warehouse | support")
+		role := fs.String("role", "buyer", "buyer | warehouse | support")
+		lead := fs.Bool("team-lead", false, "can hand orders over to other employees")
 		pass := fs.String("password", "", "password (10+ characters)")
 		_ = fs.Parse(args[1:])
 		if *name == "" || *email == "" || len(*pass) < 10 {
 			return true, errors.New("create-employee: -name, -email and -password (10+ characters) are required")
 		}
-		switch domain.Role(*role) {
-		case domain.RoleBuyer, domain.RoleLead, domain.RoleWarehouse, domain.RoleSupport:
-		default:
+		if !domain.Role(*role).Valid() {
 			return true, fmt.Errorf("unknown role %q", *role)
 		}
 		hash, err := bcrypt.GenerateFromPassword([]byte(*pass), bcrypt.DefaultCost)
@@ -113,6 +129,9 @@ func workspaceCommand(ctx context.Context, args []string, st *wsstore.Store, log
 			return true, err
 		}
 		e, err := st.Q().CreateEmployee(ctx, *name, strings.TrimSpace(*email), domain.Role(*role), string(hash))
+		if err == nil && *lead {
+			err = st.Q().SetTeamLead(ctx, e.ID, true)
+		}
 		if err == nil {
 			log.Info("employee created", "email", e.Email, "role", e.Role)
 		}

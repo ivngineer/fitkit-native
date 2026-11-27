@@ -64,6 +64,10 @@ type Config struct {
 	BootstrapAdminEmail    string
 	BootstrapAdminPassword string
 	BootstrapAdminName     string
+
+	// Admin panel (/admin): logins from FITKIT_ADMINS ("login:password,login2:password2").
+	Admins      map[string]string
+	AdminWebDir string
 }
 
 func Load() Config {
@@ -102,6 +106,9 @@ func Load() Config {
 		BootstrapAdminEmail:    env("FITKIT_BOOTSTRAP_ADMIN_EMAIL", ""),
 		BootstrapAdminPassword: env("FITKIT_BOOTSTRAP_ADMIN_PASSWORD", ""),
 		BootstrapAdminName:     env("FITKIT_BOOTSTRAP_ADMIN_NAME", "Адміністратор"),
+
+		Admins:      admins(env("FITKIT_ADMINS", "")),
+		AdminWebDir: env("FITKIT_ADMIN_WEB_DIR", ""),
 	}
 }
 
@@ -120,6 +127,20 @@ func amazonTags() map[string]string {
 		}
 	}
 	return tags
+}
+
+// admins parses "login:password,login2:password2". Entries without a login or a
+// password are skipped; the password is everything after the first colon.
+func admins(raw string) map[string]string {
+	out := map[string]string{}
+	for _, entry := range strings.Split(raw, ",") {
+		login, password, ok := strings.Cut(strings.TrimSpace(entry), ":")
+		login = strings.TrimSpace(login)
+		if ok && login != "" && password != "" {
+			out[login] = password
+		}
+	}
+	return out
 }
 
 func env(key, fallback string) string {

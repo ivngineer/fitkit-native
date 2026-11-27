@@ -5,8 +5,9 @@ Fitkit turns Pinterest saves into a shopping list. Save an outfit on Pinterest, 
 ```
 ios/              SwiftUI iPhone and iPad app (iOS 18+)
 server/           Go API server: accounts, Pinterest import, analysis pipeline, provider keys,
-                  and the employee workspace API for the desktop app buyers use
+                  the employee workspace API for the desktop app buyers use, and the admin API
 agent-workspace/  React desktop app for Fitkit's buyers (served by the server or run with Vite)
+admin-panel/      React admin panel: employee accounts and analytics (served at /admin)
 ```
 
 The app only talks to the Fitkit server. Scraping, third-party API keys and accounts all stay on the server.
@@ -44,7 +45,19 @@ FITKIT_WEB_DIR=../agent-workspace/dist FITKIT_BOOTSTRAP_ADMIN_EMAIL=you@fitkit.s
 
 Open http://localhost:8080 and sign in with the bootstrap account. `ALLOW_SEED=true go run ./cmd/fitkitd seed-workspace` loads demo requests (`anna@fitkit.space` / `fitkit-demo`); it wipes workspace data. While working on the front-end, run `npm run dev` in `agent-workspace/` instead (http://localhost:5173, proxying `/api` and `/media` to :8080).
 
-### 3. iOS app
+### 3. Admin panel
+
+Admins manage employee accounts and see per-employee analytics at `/admin`. There is no sign-up: the logins are fixed in `FITKIT_ADMINS` as `login:password` pairs separated by commas, and removing a login from it closes that admin's access on the next request.
+
+```sh
+cd admin-panel && npm install && npm run build
+cd ../server
+FITKIT_ADMINS='kostya:a-long-password,ivan:another-long-one' FITKIT_ADMIN_WEB_DIR=../admin-panel/dist ./run.sh
+```
+
+Open http://localhost:8080/admin. For front-end work run `npm run dev` in `admin-panel/` (http://localhost:5174/admin/, proxying `/admin/api` to :8080).
+
+### 4. iOS app
 
 Open `ios/Fitkit.xcodeproj` in Xcode 26 or later and run the **Fitkit** scheme on a simulator. Debug builds point to `http://localhost:8080`. You can change this in the Account screen under Developer, or through the `FITKIT_API_BASE_URL` build setting. Release builds use `https://api.fitkit.app`, which is a placeholder.
 
@@ -153,6 +166,8 @@ Fitkit takes no payment and isn't the seller; see [mvp-plan.md](mvp-plan.md). Th
 
 The order is stored as a new request in the employee workspace (client `user:<id>`, the pin image as the order photo) and the response carries its number (`#1000`, `#1001`, …) and the status the client sees. `GET /v1/orders` lists the user's orders with that status only — buyers, notes and history stay internal. Payment and delivery aren't part of this yet.
 
+In the app, `POST /v1/orders/{id}/complaints` reports a problem with an order. The complaint is filed against the employee who owns the order and only feeds the admin analytics for now.
+
 ### Employee workspace (`internal/workspace`)
 The desktop app buyers use (React, `agent-workspace/`) talks to the same server under `/api`, with its own employee accounts and cookie sessions, and the server can serve its build (`FITKIT_WEB_DIR`). Tables live in the same SQLite file.
 
@@ -163,7 +178,12 @@ The desktop app buyers use (React, `agent-workspace/`) talks to the same server 
 - **Webhooks** (`/webhooks/client-app/*`, `/webhooks/tracking`) are HMAC-signed (`X-Fitkit-Signature: sha256=<hex>`).
 - Nova Poshta, the tracking aggregator, refunds and client notices are interfaces with logging fakes for now (`internal/workspace/integrations`).
 
-The first employee comes from `FITKIT_BOOTSTRAP_ADMIN_EMAIL` / `FITKIT_BOOTSTRAP_ADMIN_PASSWORD` while there are none; more with `go run ./cmd/fitkitd create-employee -name … -email … -role buyer|lead|warehouse|support -password …`. `ALLOW_SEED=true go run ./cmd/fitkitd seed-workspace` wipes the workspace tables (not app accounts or pins) and loads demo data (`anna@fitkit.space` / `fitkit-demo`).
+### Admin panel (`admin-panel/`, `internal/workspace/httpapi/admin.go`)
+- Admin sign-in checks `FITKIT_ADMINS`; sessions are stored hashed in `admin_sessions` (12 h, cookie `fitkit_admin` on `/admin`, or Bearer), with 10 attempts per 15 minutes.
+- Employees: add, edit name / email (the sign-in login) / role, toggle team lead, set a new password (signs them out everywhere), delete. Deleting is soft: access closes, their active orders go back to the queue, history and stats stay, and the email can be reused.
+- Analytics: a completed order is one in `delivered`, counted for its owner. The page shows totals, the top performer, a leaderboard by completed orders and the employees with the most complaints.
+
+Roles are `buyer`, `warehouse` and `support`; any of them can also be a **team lead**, which for now only adds the right to hand an order over to another employee (`POST /api/orders/{id}/assign`). Only the order's owner edits it. Employees are added in the admin panel; the first one can also come from `FITKIT_BOOTSTRAP_ADMIN_EMAIL` / `FITKIT_BOOTSTRAP_ADMIN_PASSWORD` while there are none, or from `go run ./cmd/fitkitd create-employee -name … -email … -role buyer|warehouse|support [-team-lead] -password …`. Older databases with the `lead` role are migrated to buyer + team lead. `ALLOW_SEED=true go run ./cmd/fitkitd seed-workspace` wipes the workspace tables (not app accounts or pins) and loads demo data (`anna@fitkit.space` / `fitkit-demo`).
 
 ## API
 
@@ -190,6 +210,7 @@ The first employee comes from `FITKIT_BOOTSTRAP_ADMIN_EMAIL` / `FITKIT_BOOTSTRAP
 | PUT | `/v1/looks/{id}/stores/{merchant}` | `{status, orderRef?, trackingNo?, carrier?}` |
 | POST | `/v1/orders` | `{pinId, name, idempotencyKey?, items: [{itemId, listingUrl, size?, quantity?, comment?}]}` → order with its number |
 | GET | `/v1/orders`, `/v1/orders/{id}` | the user's orders with the status they see |
+| POST | `/v1/orders/{id}/complaints` | `{text}` (1–1000 chars) → `{id}`; a problem with the user's own order |
 | GET | `/media/...` | pin images and demo crops |
 
 Authenticated routes take `Authorization: Bearer <token>`. Errors come back as `{"error": {"code", "message"}}`.
@@ -211,6 +232,7 @@ The employee workspace API (`/api/...`: sign-in, orders, parcels, tickets, event
 | `POST /api/orders/{id}/notes` | `{text}` | Team note |
 | `POST /api/orders/{id}/cancel` | | Cancel before purchase, refund what is left |
 | `POST /api/orders/{id}/ship` | | Create the Nova Poshta ТТН (all store parcels at the warehouse) |
+| `POST /api/orders/{id}/assign` | `{employeeId}` | Team lead only: hand the order to another employee (a new request goes in progress) |
 | `GET /api/clients`, `GET /api/clients/{id}` | | Clients |
 | `GET /api/shipments?order=…` | | Parcels of both legs with tracking events |
 | `POST /api/shipments/{id}/tracking` | `{tracking, carrier?}` | Add a store tracking number; registered with the aggregator |
@@ -218,6 +240,23 @@ The employee workspace API (`/api/...`: sign-in, orders, parcels, tickets, event
 | `GET /api/tickets?status=open` | | Support tickets with messages |
 | `POST /api/tickets/{id}/messages` | `{text}` | Reply as Fitkit Support (sent to the client app) |
 | `POST /api/tickets/{id}/resolve` | | Close the ticket |
+
+#### Admin API
+
+Admin session from `POST /admin/api/auth/login`; errors are `{"error": "<message>"}`.
+
+| Method & path | Body | Does |
+| --- | --- | --- |
+| `POST /admin/api/auth/login` | `{login, password}` | `{login, token}` and the `fitkit_admin` cookie; 503 when `FITKIT_ADMINS` is empty |
+| `POST /admin/api/auth/logout` | | |
+| `GET /admin/api/me` | | `{login}` |
+| `GET /admin/api/analytics` | | `{totals, leaderboard, mostComplaints}` |
+| `GET /admin/api/employees` | | Employees with `stats` (`completed`, `inProgress`, `onTheWay`, `cancelled`, `complaints`) |
+| `POST /admin/api/employees` | `{name, email, role, isTeamLead, password}` | Add (password 10+ characters; 409 if the email is taken) |
+| `GET /admin/api/employees/{id}` | | One employee with stats, recent orders and complaints |
+| `PATCH /admin/api/employees/{id}` | `{name, email, role, isTeamLead}` | Edit |
+| `PUT /admin/api/employees/{id}/password` | `{password}` | New password; signs them out |
+| `DELETE /admin/api/employees/{id}` | | Close access; active orders go back to the queue |
 
 #### Workspace webhooks (signed)
 

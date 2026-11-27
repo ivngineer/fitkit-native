@@ -56,7 +56,7 @@ func Load(ctx context.Context, st *store.Store) error {
 			role             domain.Role
 		}{
 			{"anna", "Анна Коваль", "anna@fitkit.space", domain.RoleBuyer},
-			{"iryna", "Ірина Руденко", "iryna@fitkit.space", domain.RoleLead},
+			{"iryna", "Ірина Руденко", "iryna@fitkit.space", domain.RoleBuyer},
 			{"taras", "Тарас Мельник", "taras@fitkit.space", domain.RoleBuyer},
 			{"oleh", "Олег Савчук", "sklad@fitkit.space", domain.RoleWarehouse},
 		} {
@@ -65,6 +65,10 @@ func Load(ctx context.Context, st *store.Store) error {
 				return err
 			}
 			emp[e.key] = x.ID
+		}
+		// Iryna leads the shift: she can hand orders over to others.
+		if err := q.SetTeamLead(ctx, emp["iryna"], true); err != nil {
+			return err
 		}
 
 		cl := map[string]string{}

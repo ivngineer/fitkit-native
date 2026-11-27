@@ -13,7 +13,10 @@ import (
 	"time"
 )
 
-var ErrNotFound = errors.New("not found")
+var (
+	ErrNotFound = errors.New("not found")
+	ErrConflict = errors.New("conflict")
+)
 
 // DBTX is satisfied by *sql.DB and *sql.Tx.
 type DBTX interface {
@@ -195,6 +198,26 @@ CREATE TABLE IF NOT EXISTS ticket_messages (
 	at        INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ticket_messages_by_ticket ON ticket_messages(ticket_id, at);
+
+-- A client's complaint about an order, sent from the app. Counted against the
+-- employee who had the order at that moment.
+CREATE TABLE IF NOT EXISTS complaints (
+	id          TEXT PRIMARY KEY,
+	order_id    TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+	employee_id TEXT REFERENCES employees(id),
+	client_id   TEXT NOT NULL REFERENCES clients(id),
+	text        TEXT NOT NULL,
+	created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS complaints_by_employee ON complaints(employee_id, created_at DESC);
+
+-- Admin panel sign-ins. Admins themselves are a fixed list in the environment.
+CREATE TABLE IF NOT EXISTS admin_sessions (
+	token_hash TEXT PRIMARY KEY,
+	login      TEXT NOT NULL,
+	expires_at INTEGER NOT NULL,
+	created_at INTEGER NOT NULL
+);
 `
 
 // Migrate creates the workspace tables. Safe to run on every start.
@@ -202,14 +225,39 @@ func (s *Store) Migrate(ctx context.Context) error {
 	if _, err := s.DB.ExecContext(ctx, schema); err != nil {
 		return fmt.Errorf("workspace migrate: %w", err)
 	}
+	for _, c := range []struct{ table, column, def string }{
+		{"employees", "is_team_lead", "INTEGER NOT NULL DEFAULT 0"},
+		{"employees", "deleted_at", "INTEGER"},
+	} {
+		if err := s.addColumn(ctx, c.table, c.column, c.def); err != nil {
+			return fmt.Errorf("workspace migrate: %w", err)
+		}
+	}
+	// The old "lead" role is now a buyer who is a team lead.
+	if _, err := s.DB.ExecContext(ctx, `UPDATE employees SET role = 'buyer', is_team_lead = 1 WHERE role = 'lead'`); err != nil {
+		return fmt.Errorf("workspace migrate: %w", err)
+	}
 	return nil
+}
+
+// addColumn adds a column to a table created by an older schema.
+func (s *Store) addColumn(ctx context.Context, table, column, definition string) error {
+	var n int
+	if err := s.DB.QueryRowContext(ctx, `SELECT count(*) FROM pragma_table_info(?) WHERE name = ?`, table, column).Scan(&n); err != nil {
+		return err
+	}
+	if n > 0 {
+		return nil
+	}
+	_, err := s.DB.ExecContext(ctx, `ALTER TABLE `+table+` ADD COLUMN `+column+` `+definition)
+	return err
 }
 
 // Reset deletes all workspace data (tests and demo seeding only). App accounts, pins
 // and looks are not touched.
 func (s *Store) Reset(ctx context.Context) error {
 	return s.Tx(ctx, func(q *Q) error {
-		for _, t := range []string{"ticket_messages", "tickets", "tracking_events", "shipments", "order_history", "order_notes", "order_items", "orders", "clients", "employee_sessions", "employees"} {
+		for _, t := range []string{"complaints", "admin_sessions", "ticket_messages", "tickets", "tracking_events", "shipments", "order_history", "order_notes", "order_items", "orders", "clients", "employee_sessions", "employees"} {
 			if _, err := q.db.ExecContext(ctx, `DELETE FROM `+t); err != nil {
 				return err
 			}

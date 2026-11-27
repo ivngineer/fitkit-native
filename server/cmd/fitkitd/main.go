@@ -101,7 +101,7 @@ func run(log *slog.Logger) error {
 	}).Handler()
 	srv := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           routes(app, ws.handler),
+		Handler:           routes(app, ws.handler, ws.admin),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	errc := make(chan error, 1)

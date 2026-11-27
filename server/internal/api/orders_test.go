@@ -202,6 +202,28 @@ func TestBuyPlacesWorkspaceOrder(t *testing.T) {
 	if order.Status != "Готуємо ваше замовлення" {
 		t.Fatalf("status after take: %q", order.Status)
 	}
+
+	// Complaints from the app count against the employee who has the order.
+	if code := c.do("POST", "/v1/orders/"+order.ID+"/complaints", map[string]string{"text": "  "}, nil); code != 422 {
+		t.Fatalf("empty complaint: %d", code)
+	}
+	if code := other.do("POST", "/v1/orders/"+order.ID+"/complaints", map[string]string{"text": "Not mine"}, nil); code != 404 {
+		t.Fatalf("complaint about someone else's order: %d", code)
+	}
+	if code := c.do("POST", "/v1/orders/"+order.ID+"/complaints", map[string]string{"text": "Розмір не той"}, nil); code != 201 {
+		t.Fatalf("complaint: %d", code)
+	}
+	stats, err := svc.Store.Q().AllEmployeeStats(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	total := 0
+	for _, st := range stats {
+		total += st.Complaints
+	}
+	if total != 1 {
+		t.Fatalf("complaints counted: %+v", stats)
+	}
 }
 
 func TestBuyNeedsAnalysis(t *testing.T) {

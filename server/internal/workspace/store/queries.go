@@ -17,17 +17,35 @@ type EmployeeAuth struct {
 	PasswordHash string
 }
 
+// Employees removed in the admin panel keep their row (orders and history point at
+// them) with deleted_at set; they can't sign in and aren't listed.
+const employeeCols = `id, name, email, role, is_team_lead`
+
+func scanEmployee(r interface{ Scan(...any) error }, extra ...any) (domain.Employee, error) {
+	var e domain.Employee
+	err := r.Scan(append([]any{&e.ID, &e.Name, &e.Email, &e.Role, &e.IsTeamLead}, extra...)...)
+	return e, err
+}
+
 func (q *Q) CreateEmployee(ctx context.Context, name, email string, role domain.Role, hash string) (domain.Employee, error) {
-	e := domain.Employee{ID: NewID(), Name: name, Email: strings.ToLower(email), Role: role}
+	e := domain.Employee{ID: NewID(), Name: name, Email: strings.ToLower(strings.TrimSpace(email)), Role: role}
 	_, err := q.db.ExecContext(ctx, `INSERT INTO employees (id, name, email, role, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		e.ID, e.Name, e.Email, e.Role, hash, ms(time.Now()))
+	if err != nil && strings.Contains(err.Error(), "UNIQUE") {
+		return e, ErrConflict
+	}
 	return e, err
 }
 
 func (q *Q) EmployeeByEmail(ctx context.Context, email string) (EmployeeAuth, error) {
-	var e EmployeeAuth
-	err := q.db.QueryRowContext(ctx, `SELECT id, name, email, role, password_hash FROM employees WHERE email = ?`, strings.ToLower(email)).
-		Scan(&e.ID, &e.Name, &e.Email, &e.Role, &e.PasswordHash)
+	var a EmployeeAuth
+	e, err := scanEmployee(q.db.QueryRowContext(ctx, `SELECT `+employeeCols+`, password_hash FROM employees WHERE email = ? AND deleted_at IS NULL`, strings.ToLower(email)), &a.PasswordHash)
+	a.Employee = e
+	return a, notFound(err)
+}
+
+func (q *Q) EmployeeByID(ctx context.Context, id string) (domain.Employee, error) {
+	e, err := scanEmployee(q.db.QueryRowContext(ctx, `SELECT `+employeeCols+` FROM employees WHERE id = ? AND deleted_at IS NULL`, id))
 	return e, notFound(err)
 }
 
@@ -37,21 +55,72 @@ func (q *Q) CountEmployees(ctx context.Context) (int, error) {
 	return n, err
 }
 
+// Employees lists active employees by name.
 func (q *Q) Employees(ctx context.Context) ([]domain.Employee, error) {
-	rows, err := q.db.QueryContext(ctx, `SELECT id, name, email, role FROM employees ORDER BY name`)
+	rows, err := q.db.QueryContext(ctx, `SELECT `+employeeCols+` FROM employees WHERE deleted_at IS NULL ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	out := []domain.Employee{}
 	for rows.Next() {
-		var e domain.Employee
-		if err := rows.Scan(&e.ID, &e.Name, &e.Email, &e.Role); err != nil {
+		e, err := scanEmployee(rows)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, e)
 	}
 	return out, rows.Err()
+}
+
+// UpdateEmployee changes name, e-mail, role and the team lead flag.
+func (q *Q) UpdateEmployee(ctx context.Context, e domain.Employee) error {
+	res, err := q.db.ExecContext(ctx, `UPDATE employees SET name = ?, email = ?, role = ?, is_team_lead = ? WHERE id = ? AND deleted_at IS NULL`,
+		e.Name, strings.ToLower(strings.TrimSpace(e.Email)), e.Role, e.IsTeamLead, e.ID)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE") {
+			return ErrConflict
+		}
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (q *Q) SetTeamLead(ctx context.Context, id string, lead bool) error {
+	_, err := q.db.ExecContext(ctx, `UPDATE employees SET is_team_lead = ? WHERE id = ?`, lead, id)
+	return err
+}
+
+// SetPassword replaces the password and signs the employee out everywhere.
+func (q *Q) SetPassword(ctx context.Context, id, hash string) error {
+	res, err := q.db.ExecContext(ctx, `UPDATE employees SET password_hash = ? WHERE id = ? AND deleted_at IS NULL`, hash, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	_, err = q.db.ExecContext(ctx, `DELETE FROM employee_sessions WHERE employee_id = ?`, id)
+	return err
+}
+
+// DeleteEmployee removes access: marks the row deleted (keeping history) and ends sessions.
+// The e-mail gets a suffix so it can be reused for a new account.
+func (q *Q) DeleteEmployee(ctx context.Context, id string) error {
+	now := time.Now()
+	res, err := q.db.ExecContext(ctx, `UPDATE employees SET deleted_at = ?, is_team_lead = 0, email = email || '#deleted-' || ? WHERE id = ? AND deleted_at IS NULL`,
+		ms(now), now.UnixNano(), id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	_, err = q.db.ExecContext(ctx, `DELETE FROM employee_sessions WHERE employee_id = ?`, id)
+	return err
 }
 
 func (q *Q) CreateSession(ctx context.Context, tokenHash []byte, employeeID string, expires time.Time) error {
@@ -61,9 +130,8 @@ func (q *Q) CreateSession(ctx context.Context, tokenHash []byte, employeeID stri
 }
 
 func (q *Q) SessionEmployee(ctx context.Context, tokenHash []byte) (domain.Employee, error) {
-	var e domain.Employee
-	err := q.db.QueryRowContext(ctx, `SELECT e.id, e.name, e.email, e.role FROM employee_sessions s JOIN employees e ON e.id = s.employee_id WHERE s.token_hash = ? AND s.expires_at > ?`,
-		hex.EncodeToString(tokenHash), ms(time.Now())).Scan(&e.ID, &e.Name, &e.Email, &e.Role)
+	e, err := scanEmployee(q.db.QueryRowContext(ctx, `SELECT e.id, e.name, e.email, e.role, e.is_team_lead FROM employee_sessions s JOIN employees e ON e.id = s.employee_id
+		WHERE s.token_hash = ? AND s.expires_at > ? AND e.deleted_at IS NULL`, hex.EncodeToString(tokenHash), ms(time.Now())))
 	return e, notFound(err)
 }
 

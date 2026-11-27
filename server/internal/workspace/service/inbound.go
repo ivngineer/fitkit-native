@@ -237,7 +237,7 @@ func (s *Service) Tracking(ctx context.Context, u TrackingUpdate) error {
 
 // Arrived is the warehouse confirming that a store parcel was received and checked.
 func (s *Service) Arrived(ctx context.Context, actor domain.Employee, shipmentID string) error {
-	if actor.Role != domain.RoleWarehouse && actor.Role != domain.RoleLead && actor.Role != domain.RoleBuyer {
+	if actor.Role != domain.RoleWarehouse && actor.Role != domain.RoleBuyer {
 		return ErrForbidden
 	}
 	return s.run(ctx, func(q *store.Q, op *op) error {

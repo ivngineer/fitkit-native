@@ -37,6 +37,44 @@ func (s *Server) orderRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /v1/orders", s.authed(s.userLimited(s.createOrder)))
 	mux.HandleFunc("GET /v1/orders", s.authed(s.listOrders))
 	mux.HandleFunc("GET /v1/orders/{id}", s.authed(s.getOrder))
+	mux.HandleFunc("POST /v1/orders/{id}/complaints", s.authed(s.userLimited(s.complain)))
+}
+
+const maxComplaintLen = 1000
+
+// complain records the user's complaint about one of their orders. It only feeds
+// the admin panel's statistics (counted against the employee who has the order).
+func (s *Server) complain(w http.ResponseWriter, r *http.Request, sess session) {
+	if s.Workspace == nil {
+		writeError(w, http.StatusServiceUnavailable, "orders_unavailable", "Ordering isn't available right now.")
+		return
+	}
+	var body struct {
+		Text string `json:"text"`
+	}
+	if !decode(w, r, &body) {
+		return
+	}
+	text, ok := cleanText(body.Text, maxComplaintLen)
+	if !ok || text == "" {
+		writeError(w, http.StatusUnprocessableEntity, "invalid_text", "Describe the problem (up to 1000 characters).")
+		return
+	}
+	list, err := s.userOrders(r, sess)
+	if err != nil {
+		s.internal(w, r, err)
+		return
+	}
+	if !slices.ContainsFunc(list, func(o wsdomain.Order) bool { return o.ID == r.PathValue("id") }) {
+		writeError(w, http.StatusNotFound, "not_found", "Order not found.")
+		return
+	}
+	id, err := s.Workspace.Complain(r.Context(), r.PathValue("id"), text)
+	if err != nil {
+		s.internal(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]string{"id": id})
 }
 
 type orderItemRequest struct {

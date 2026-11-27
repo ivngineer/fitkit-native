@@ -85,8 +85,10 @@ func (s *Service) now() time.Time {
 	return time.Now()
 }
 
+// canEdit: only the employee who has the order works on it. Team leads can hand
+// orders over (Transfer) but don't edit others' orders.
 func canEdit(actor domain.Employee, o domain.Order) bool {
-	return actor.Role == domain.RoleLead || (o.OwnerID != nil && *o.OwnerID == actor.ID)
+	return o.OwnerID != nil && *o.OwnerID == actor.ID
 }
 
 func ptr[T any](v T) *T { return &v }

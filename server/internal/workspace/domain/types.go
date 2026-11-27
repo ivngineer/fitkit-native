@@ -43,16 +43,19 @@ type Role string
 
 const (
 	RoleBuyer     Role = "buyer"
-	RoleLead      Role = "lead"
 	RoleWarehouse Role = "warehouse"
 	RoleSupport   Role = "support"
 )
+
+func (r Role) Valid() bool { return r == RoleBuyer || r == RoleWarehouse || r == RoleSupport }
 
 type Employee struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Email string `json:"email"`
 	Role  Role   `json:"role"`
+	// IsTeamLead lets the employee hand orders over to other employees.
+	IsTeamLead bool `json:"isTeamLead"`
 }
 
 type Client struct {

@@ -19,7 +19,9 @@ export interface Employee {
   id: Id;
   name: string;
   email?: string;
-  role: 'buyer' | 'lead' | 'warehouse' | 'support';
+  role: 'buyer' | 'warehouse' | 'support';
+  /** Team lead: may hand orders over to other employees. */
+  isTeamLead?: boolean;
 }
 
 export interface Client {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangleIcon, ArrowLeftIcon, CheckIcon, CircleCheckIcon, ClockIcon, ExternalLinkIcon, FlagIcon, HistoryIcon, MessageSquareTextIcon, SearchIcon, XIcon } from 'lucide-react';
+import { AlertTriangleIcon, ArrowLeftIcon, CheckIcon, CircleCheckIcon, ClockIcon, ExternalLinkIcon, FlagIcon, HistoryIcon, UserRoundCogIcon, MessageSquareTextIcon, SearchIcon, XIcon } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +36,7 @@ const ITEM_STATUS: Record<ItemStatus, [string, Tone]> = {
 
 export function OrderPage() {
   const { id = '' } = useParams();
-  const { state, now, moveOrder, dispatch } = useStore();
+  const { state, me, now, moveOrder, dispatch } = useStore();
   const { client, employee, order: getOrder } = useLookups();
   const navigate = useNavigate();
   const [priceItem, setPriceItem] = useState<Item | null>(null);
@@ -89,6 +89,7 @@ export function OrderPage() {
             {c.name} · отримано {shortDate(o.createdAt)}, {clock(o.createdAt)}
           </div>
         </div>
+        {me.isTeamLead && active && <TransferOrder order={o} />}
         <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
           <HistoryIcon /> Історія
         </Button>
@@ -399,6 +400,73 @@ function Notes({ order }: { order: Order }) {
         </Button>
       </form>
     </div>
+  );
+}
+
+/** Team leads hand an order over to another employee (POST /api/orders/{id}/assign). */
+function TransferOrder({ order }: { order: Order }) {
+  const { state, dispatch } = useStore();
+  const [open, setOpen] = useState(false);
+  const [to, setTo] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const people = state.employees.filter((e) => e.id !== order.ownerId);
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          setTo(null);
+          setOpen(true);
+        }}
+      >
+        <UserRoundCogIcon /> Передати
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Передати {order.number}</DialogTitle>
+            <DialogDescription>Замовлення перейде до обраного співробітника, він побачить його у своїх заявках.</DialogDescription>
+          </DialogHeader>
+          <div role="radiogroup" aria-label="Кому передати" className="grid max-h-80 gap-1 overflow-y-auto">
+            {people.length === 0 && <div className="py-6 text-center text-sm text-muted-foreground">Немає кому передати</div>}
+            {people.map((e) => (
+              <button
+                key={e.id}
+                type="button"
+                role="radio"
+                aria-checked={to === e.id}
+                onClick={() => setTo(e.id)}
+                className={cn(
+                  'flex items-center justify-between rounded-2xl px-4 py-2.5 text-left text-sm transition-colors',
+                  to === e.id ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary',
+                )}
+              >
+                <span className="font-medium">{e.name}</span>
+                {e.id === state.me && <span className="text-xs opacity-70">це ви</span>}
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Скасувати
+            </Button>
+            <Button
+              disabled={!to || busy}
+              onClick={async () => {
+                const name = state.employees.find((e) => e.id === to)?.name ?? '';
+                setBusy(true);
+                const ok = await dispatch({ type: 'assign', orderId: order.id, employeeId: to! }, `${order.number} передано: ${name}`);
+                setBusy(false);
+                if (ok) setOpen(false);
+              }}
+            >
+              Передати
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

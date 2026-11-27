@@ -75,6 +75,7 @@ func New(cfg Config) http.Handler {
 	auth("POST /api/orders/{id}/notes", s.addNote)
 	auth("POST /api/orders/{id}/cancel", s.cancel)
 	auth("POST /api/orders/{id}/ship", s.ship)
+	auth("POST /api/orders/{id}/assign", s.assign)
 
 	auth("GET /api/clients", s.listClients)
 	auth("GET /api/clients/{id}", s.getClient)
@@ -451,6 +452,17 @@ func (s *server) addNote(w http.ResponseWriter, r *http.Request, me domain.Emplo
 func (s *server) cancel(w http.ResponseWriter, r *http.Request, me domain.Employee) {
 	id := r.PathValue("id")
 	s.respondOrder(w, r.Context(), id, s.Service.Cancel(r.Context(), me, id))
+}
+
+func (s *server) assign(w http.ResponseWriter, r *http.Request, me domain.Employee) {
+	var in struct {
+		EmployeeID string `json:"employeeId"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	id := r.PathValue("id")
+	s.respondOrder(w, r.Context(), id, s.Service.Transfer(r.Context(), me, id, in.EmployeeID))
 }
 
 func (s *server) ship(w http.ResponseWriter, r *http.Request, me domain.Employee) {

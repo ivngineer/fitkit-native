@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { useLookups, useStore } from '@/store/AppStore';
 import { useSettings } from '@/store/Settings';
 
-const ROLE = { buyer: 'Закупник', lead: 'Старший зміни', warehouse: 'Склад', support: 'Підтримка' } as const;
+const ROLE = { buyer: 'Закупник', warehouse: 'Склад', support: 'Підтримка' } as const;
 
 export function Layout() {
   const { state, now, toast } = useStore();
@@ -82,7 +82,10 @@ export function Layout() {
           <Avatar name={me.name} />
           <div className="flex-1 text-sm leading-tight">
             <div className="font-medium">{me.name}</div>
-            <div className="text-xs text-muted-foreground">{ROLE[me.role]}</div>
+            <div className="text-xs text-muted-foreground">
+              {ROLE[me.role] ?? me.role}
+              {me.isTeamLead && ' · Тімлід'}
+            </div>
           </div>
           <SettingsIcon className="size-[18px] text-muted-foreground" />
         </button>

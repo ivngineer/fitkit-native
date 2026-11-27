@@ -21,6 +21,7 @@ export type Action =
   | { type: 'itemClientConfirmed'; orderId: Id; itemId: Id }
   | { type: 'setProblem'; orderId: Id; problem?: string }
   | { type: 'cancelOrder'; orderId: Id }
+  | { type: 'assign'; orderId: Id; employeeId: Id }
   | { type: 'addNote'; orderId: Id; text: string }
   | { type: 'ship'; orderId: Id }
   | { type: 'setTracking'; shipmentId: Id; carrier: string; tracking: string }
@@ -175,6 +176,9 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
             break;
           case 'cancelOrder':
             upsertOrder(await api.cancel(a.orderId));
+            break;
+          case 'assign':
+            upsertOrder(await api.assign(a.orderId, a.employeeId));
             break;
           case 'addNote':
             await api.addNote(a.orderId, a.text);

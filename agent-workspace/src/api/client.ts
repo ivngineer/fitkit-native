@@ -100,6 +100,7 @@ export const api = {
     order(await call<ApiOrder>('PATCH', `/api/orders/${id}/items/${itemId}`, { action, ...(priceUAH != null ? { price: toKop(priceUAH) } : {}) })),
   setProblem: async (id: Id, problem?: string) => order(await call<ApiOrder>('PUT', `/api/orders/${id}/problem`, { problem: problem ?? null })),
   addNote: (id: Id, text: string) => call<void>('POST', `/api/orders/${id}/notes`, { text }),
+  assign: async (id: Id, employeeId: Id) => order(await call<ApiOrder>('POST', `/api/orders/${id}/assign`, { employeeId })),
   cancel: async (id: Id) => order(await call<ApiOrder>('POST', `/api/orders/${id}/cancel`)),
   ship: async (id: Id) => order(await call<ApiOrder>('POST', `/api/orders/${id}/ship`)),
 
