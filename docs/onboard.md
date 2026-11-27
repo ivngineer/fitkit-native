@@ -3,9 +3,10 @@
 Fitkit turns Pinterest saves into a shopping list. Save an outfit on Pinterest, open Fitkit, tap the pin, and get each piece (jacket, boots, bag) with store listings and prices.
 
 ```
-ios/      SwiftUI iPhone and iPad app (iOS 18+)
-server/   Go API server: accounts, Pinterest import, analysis pipeline, provider keys,
-          and the employee workspace API for the desktop app buyers use
+ios/              SwiftUI iPhone and iPad app (iOS 18+)
+server/           Go API server: accounts, Pinterest import, analysis pipeline, provider keys,
+                  and the employee workspace API for the desktop app buyers use
+agent-workspace/  React desktop app for Fitkit's buyers (served by the server or run with Vite)
 ```
 
 The app only talks to the Fitkit server. Scraping, third-party API keys and accounts all stay on the server.
@@ -31,7 +32,19 @@ What works depends on which keys are set:
 | Gemini + imgbb + any one of `SEARCHAPI_API_KEY`, `SCRAPINGDOG_API_KEY`, `SERPAPI_API_KEY` | real detected items with visually matched listings and prices |
 | `FITKIT_DEMO_ANALYSIS=1` | placeholder items, labeled "Demo results" |
 
-### 2. iOS app
+### 2. Desktop app (buyers)
+
+Requires Node 20+. Build it once and let the server serve it:
+
+```sh
+cd agent-workspace && npm install && npm run build
+cd ../server
+FITKIT_WEB_DIR=../agent-workspace/dist FITKIT_BOOTSTRAP_ADMIN_EMAIL=you@fitkit.space FITKIT_BOOTSTRAP_ADMIN_PASSWORD=change-me-please ./run.sh
+```
+
+Open http://localhost:8080 and sign in with the bootstrap account. `ALLOW_SEED=true go run ./cmd/fitkitd seed-workspace` loads demo requests (`anna@fitkit.space` / `fitkit-demo`); it wipes workspace data. While working on the front-end, run `npm run dev` in `agent-workspace/` instead (http://localhost:5173, proxying `/api` and `/media` to :8080).
+
+### 3. iOS app
 
 Open `ios/Fitkit.xcodeproj` in Xcode 26 or later and run the **Fitkit** scheme on a simulator. Debug builds point to `http://localhost:8080`. You can change this in the Account screen under Developer, or through the `FITKIT_API_BASE_URL` build setting. Release builds use `https://api.fitkit.app`, which is a placeholder.
 
@@ -141,7 +154,7 @@ Fitkit takes no payment and isn't the seller; see [mvp-plan.md](mvp-plan.md). Th
 The order is stored as a new request in the employee workspace (client `user:<id>`, the pin image as the order photo) and the response carries its number (`#1000`, `#1001`, …) and the status the client sees. `GET /v1/orders` lists the user's orders with that status only — buyers, notes and history stay internal. Payment and delivery aren't part of this yet.
 
 ### Employee workspace (`internal/workspace`)
-The desktop app buyers use (React, in the `UX-dizain` repository) talks to the same server under `/api`, with its own employee accounts and cookie sessions, and the server can serve its build (`FITKIT_WEB_DIR`). Tables live in the same SQLite file.
+The desktop app buyers use (React, `agent-workspace/`) talks to the same server under `/api`, with its own employee accounts and cookie sessions, and the server can serve its build (`FITKIT_WEB_DIR`). Tables live in the same SQLite file.
 
 - **Orders**: queue of new requests (`take`, `take-next`; atomic), item checks, store price, rules (a rise up to 5% is covered, above that the client confirms, sold out is refunded; unanswered confirmations are refunded after 24 h by a background job), purchase guard, cancel with refund, problem flag, team notes, history.
 - **Parcels**: one per store after purchase, tracking numbers (manual or from the aggregator webhook), warehouse receipt, the Nova Poshta shipment once every parcel is at the warehouse; stalled parcels get flagged.
@@ -181,7 +194,43 @@ The first employee comes from `FITKIT_BOOTSTRAP_ADMIN_EMAIL` / `FITKIT_BOOTSTRAP
 
 Authenticated routes take `Authorization: Bearer <token>`. Errors come back as `{"error": {"code", "message"}}`.
 
-The employee workspace API (`/api/...`: sign-in, orders, parcels, tickets, events; `/webhooks/...`) uses employee accounts, an HttpOnly cookie or Bearer token, and `{"error": "<message>"}` errors; amounts are in kopiyky. It is documented with the desktop app in the `UX-dizain` repository (`fitkit-employee-app/api/README.md`).
+The employee workspace API (`/api/...`: sign-in, orders, parcels, tickets, events; `/webhooks/...`) uses employee accounts, an HttpOnly cookie or Bearer token, and `{"error": "<message>"}` errors; amounts are in kopiyky. Amounts are in kopiyky (1 ₴ = 100); errors are `{"error": "<message in Ukrainian>"}`.
+
+| Method & path | Body | Does |
+| --- | --- | --- |
+| `GET /api/me` | | Current employee |
+| `GET /api/bootstrap` | | Everything the UI shows: me, employees, clients, orders, shipments, tickets |
+| `GET /api/events` | | SSE stream: `event: order\|shipment\|ticket`, `data: {"type","id"}` — refetch that object |
+| `GET /api/orders?status=new,in_progress&owner=me&client=…` | | Orders with items, notes, history, `money`, `clientSees`, `canPurchase` |
+| `GET /api/orders/{id}` | | One order (same shape) |
+| `POST /api/orders/take-next` | | Assign the oldest new request to me |
+| `POST /api/orders/{id}/take` | | Take a request (409 if someone was faster) |
+| `POST /api/orders/{id}/status` | `{status}` | `purchased` (all items resolved; creates store parcels), `shipped`, `delivered`, `in_progress` |
+| `PATCH /api/orders/{id}/items/{itemId}` | `{action, price?}` | `check`, `sold_out`, `store_price` (+`price`), `send_confirmation`, `client_confirmed`, `cancel` (refund) |
+| `PUT /api/orders/{id}/problem` | `{problem: string\|null}` | Flag or clear a problem |
+| `POST /api/orders/{id}/notes` | `{text}` | Team note |
+| `POST /api/orders/{id}/cancel` | | Cancel before purchase, refund what is left |
+| `POST /api/orders/{id}/ship` | | Create the Nova Poshta ТТН (all store parcels at the warehouse) |
+| `GET /api/clients`, `GET /api/clients/{id}` | | Clients |
+| `GET /api/shipments?order=…` | | Parcels of both legs with tracking events |
+| `POST /api/shipments/{id}/tracking` | `{tracking, carrier?}` | Add a store tracking number; registered with the aggregator |
+| `POST /api/shipments/{id}/arrived` | | Warehouse received the parcel |
+| `GET /api/tickets?status=open` | | Support tickets with messages |
+| `POST /api/tickets/{id}/messages` | `{text}` | Reply as Fitkit Support (sent to the client app) |
+| `POST /api/tickets/{id}/resolve` | | Close the ticket |
+
+#### Workspace webhooks (signed)
+
+Header `X-Fitkit-Signature: sha256=<hex HMAC-SHA256 of the raw body>`; secrets `CLIENT_APP_WEBHOOK_SECRET` and `TRACKER_WEBHOOK_SECRET`.
+
+| Path | From | Body |
+| --- | --- | --- |
+| `POST /webhooks/client-app/orders` | Fitkit app | `{externalId, paid, fee, client: {externalId, name, phone, telegram?, city, branch, sizes?, stores?}, items: [{name, store, url, size, qty, price?, photo?, comment?}]}` — idempotent by `externalId` |
+| `POST /webhooks/client-app/confirmations` | Fitkit app | `{orderExternalId, itemId, accept}` — answer to a price confirmation |
+| `POST /webhooks/client-app/messages` | Fitkit app | `{clientExternalId, orderExternalId?, text}` — opens or continues a support ticket |
+| `POST /webhooks/tracking` | Tracking aggregator adapter | `{tracking, status: in_transit\|arrived_warehouse\|delivered\|exception, title, detail?, at?}` |
+
+Each aggregator (17TRACK, AfterShip, …) has its own payload, so a small adapter maps it to `/webhooks/tracking`.
 
 ## TODO
 
